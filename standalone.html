@@ -1,0 +1,443 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Market Sonata — Standalone Demo</title>
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,400;0,600;1,400&family=Inter:wght@300;400;500;600&display=swap" rel="stylesheet" />
+<!-- Tone.js for in-browser piano playback -->
+<script src="https://cdnjs.cloudflare.com/ajax/libs/tone/15.0.4/Tone.js"></script>
+<style>
+  :root { color-scheme: dark; }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0; min-height: 100vh; color: #e8eaf2;
+    font-family: Inter, system-ui, sans-serif;
+    background:
+      radial-gradient(1200px 600px at 70% -10%, #1c2036 0%, transparent 60%),
+      radial-gradient(900px 500px at 0% 100%, #191426 0%, transparent 55%),
+      #0b0d17;
+  }
+  .display { font-family: "Cormorant Garamond", Georgia, serif; }
+  .gold { color: #d9b26a; }
+  .mist { color: #a7adc4; }
+  .wrap { max-width: 1200px; margin: 0 auto; padding: 32px 20px 64px; }
+  header { display:flex; align-items:baseline; justify-content:space-between; margin-bottom: 8px; flex-wrap: wrap; gap: 8px;}
+  h1.display { font-size: 44px; margin: 0; }
+  .sub { letter-spacing: .3em; text-transform: uppercase; font-size: 11px; }
+  .grid { display:grid; grid-template-columns: 340px 1fr; gap: 20px; margin-top: 24px; }
+  @media (max-width: 900px){ .grid{ grid-template-columns: 1fr; } }
+  .card { background: rgba(20,23,38,.7); border:1px solid rgba(255,255,255,.06);
+          border-radius: 18px; padding: 20px; backdrop-filter: blur(6px); }
+  .card h2.display { font-size: 24px; margin: 0 0 14px; }
+  label { display:block; font-size:10px; letter-spacing:.2em; text-transform:uppercase; color:#a7adc4; margin: 10px 0 4px; }
+  input {
+    width:100%; background:#1e2236; border:1px solid rgba(255,255,255,.1);
+    color:#e8eaf2; border-radius:10px; padding:10px 12px; font-size:15px; font-family:inherit;
+  }
+  input:focus { outline:none; border-color: rgba(217,178,106,.6); }
+  .presets { display:flex; flex-wrap:wrap; gap:6px; margin-top:10px; }
+  .chip { font-size:11px; padding:5px 11px; border-radius:999px; border:1px solid rgba(255,255,255,.12);
+          color:#a7adc4; cursor:pointer; background:none; font-family:inherit; }
+  .chip.on { background:#d9b26a; color:#0b0d17; border-color:#d9b26a; }
+  .row2 { display:grid; grid-template-columns:1fr 1fr; gap:10px; }
+  button.primary {
+    width:100%; margin-top:18px; padding:13px; border:none; border-radius:12px;
+    background:#d9b26a; color:#0b0d17; font-weight:600; letter-spacing:.15em;
+    text-transform:uppercase; font-size:13px; cursor:pointer; font-family:inherit;
+  }
+  button.primary:hover { filter:brightness(1.08); }
+  .btn-ghost {
+    padding:9px 18px; border-radius:999px; border:1px solid rgba(217,178,106,.6);
+    color:#d9b26a; background:none; text-transform:uppercase; letter-spacing:.15em;
+    font-size:12px; cursor:pointer; text-decoration:none; display:inline-block; font-family:inherit;
+  }
+  .btn-ghost:hover { background:#d9b26a; color:#0b0d17; }
+  .btn-play {
+    padding:9px 20px; border-radius:999px; border:none; background:#d9b26a; color:#0b0d17;
+    text-transform:uppercase; letter-spacing:.15em; font-size:12px; font-weight:600; cursor:pointer; font-family:inherit;
+  }
+  .chartlbl { font-size:10px; letter-spacing:.2em; text-transform:uppercase; color:#a7adc4; margin-bottom:6px; }
+  canvas { width:100%; display:block; border-radius:10px; }
+  .stats { display:grid; grid-template-columns:repeat(3,1fr); gap:10px; margin-top:16px; }
+  .stat { background:rgba(30,34,54,.6); border:1px solid rgba(255,255,255,.06); border-radius:10px; padding:8px 10px; }
+  .stat .k { font-size:9px; letter-spacing:.2em; text-transform:uppercase; color:#a7adc4; }
+  .stat .v { color:#d9b26a; font-weight:600; margin-top:2px; }
+  .note p { color:#a7adc4; line-height:1.7; font-weight:300; margin: 0 0 14px; }
+  .legend { display:flex; gap:16px; font-size:12px; color:#a7adc4; margin-top:8px; }
+  .sw { display:inline-block; width:12px; height:12px; border-radius:3px; margin-right:5px; vertical-align:middle; }
+  .empty { border:1px dashed rgba(255,255,255,.12); border-radius:18px; min-height:320px;
+           display:flex; align-items:center; justify-content:center; text-align:center; padding:24px; }
+  .tag { font-size:11px; color:#c97b84; border:1px solid rgba(201,123,132,.35); border-radius:999px; padding:3px 10px; }
+  .badge { font-size:11px; color:#a7adc4; }
+  .space > * + * { margin-top: 20px; }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header>
+    <h1 class="display gold">Market <span style="font-style:italic">Sonata</span></h1>
+    <span class="sub mist">financial markets → musical narratives</span>
+  </header>
+  <p class="mist" style="margin:0;max-width:640px;font-weight:300;">
+    A generative music system translating financial markets into musical narratives.
+    This is a fully offline single-file demo — it synthesises a deterministic market
+    for each symbol and composes a piano sonata from it in your browser.
+  </p>
+
+  <div class="grid">
+    <!-- LEFT -->
+    <div class="space">
+      <div class="card">
+        <h2 class="display gold">Select a Market</h2>
+        <label>Symbol</label>
+        <input id="symbol" value="AAPL" />
+        <div class="presets" id="presets"></div>
+        <div class="row2" style="margin-top:6px">
+          <div><label>From</label><input id="start" type="date" value="2024-01-01" /></div>
+          <div><label>To</label><input id="end" type="date" value="2024-12-31" /></div>
+        </div>
+        <button class="primary" id="composeBtn">Compose Sonata</button>
+        <p class="badge" style="margin-top:10px">
+          Demo uses deterministic <em>synthetic</em> data so it runs with no server.
+        </p>
+      </div>
+
+      <div class="card" id="chartsCard" style="display:none">
+        <h2 class="display gold" id="portraitTitle">Market Portrait</h2>
+        <div class="chartlbl">Price</div><canvas id="priceCv" height="120"></canvas>
+        <div class="chartlbl" style="margin-top:12px">Volatility</div><canvas id="volCv" height="90"></canvas>
+        <div class="chartlbl" style="margin-top:12px">Volume</div><canvas id="volumeCv" height="90"></canvas>
+      </div>
+    </div>
+
+    <!-- RIGHT -->
+    <div class="space">
+      <div class="card empty" id="emptyState">
+        <div>
+          <div class="display mist" style="font-size:30px;margin-bottom:8px">Awaiting the market's voice</div>
+          <div class="mist" style="font-size:14px">Choose a symbol and press <span class="gold">Compose Sonata</span>.</div>
+        </div>
+      </div>
+
+      <div class="card" id="playerCard" style="display:none">
+        <div style="display:flex;justify-content:space-between;align-items:flex-start;flex-wrap:wrap;gap:10px">
+          <div>
+            <h2 class="display gold" id="sonataTitle">Sonata</h2>
+            <div class="sub mist" id="sonataMeta"></div>
+          </div>
+          <div style="display:flex;gap:8px">
+            <button class="btn-play" id="playBtn">▶ Play</button>
+            <a class="btn-ghost" id="dlBtn" download="sonata.mid">↓ MIDI</a>
+          </div>
+        </div>
+        <canvas id="rollCv" height="220" style="margin-top:14px;background:rgba(11,13,23,.6);border:1px solid rgba(255,255,255,.06)"></canvas>
+        <div class="legend">
+          <span><span class="sw" style="background:#d9b26a"></span>melody</span>
+          <span><span class="sw" style="background:#7aa2d1"></span>harmony</span>
+          <span><span class="sw" style="background:#c97b84"></span>bass</span>
+        </div>
+      </div>
+
+      <div class="card" id="analystCard" style="display:none">
+        <div style="display:flex;justify-content:space-between;align-items:center">
+          <h2 class="display gold">The Analyst's Note</h2>
+          <span class="tag" id="srcTag">synthetic demo data</span>
+        </div>
+        <div class="note" id="noteBody"></div>
+        <div class="stats" id="statsBox"></div>
+      </div>
+    </div>
+  </div>
+
+  <p class="mist" style="text-align:center;margin-top:48px;font-size:12px;opacity:.6">
+    Market Sonata · standalone demo · Hisaishi · Glass · Richter
+  </p>
+</div>
+
+<script>
+/* =====================================================================
+   Market Sonata — standalone JS port of the Python music engine.
+   Layers mirror the repo: data → features → composition → MIDI + analyst.
+   ===================================================================== */
+
+// ---------- deterministic RNG (mulberry32) ----------
+function mulberry32(a){return function(){a|=0;a=a+0x6D2B79F5|0;let t=Math.imul(a^a>>>15,1|a);t=t+Math.imul(t^t>>>7,61|t)^t;return((t^t>>>14)>>>0)/4294967296;}}
+function seedFromSymbol(s){let n=0;for(const c of s)n+=c.charCodeAt(0);return n||1;}
+
+// ---------- synthetic market (mirrors backend/market_data.py) ----------
+function syntheticSeries(symbol, startISO, n=180){
+  const rng = mulberry32(seedFromSymbol(symbol));
+  const drift = (rng()-0.45)*0.0015;
+  const volBase = 0.01 + rng()*0.02;
+  let price = 100 + rng()*200;
+  const dates=[], close=[], volume=[];
+  let d0 = new Date(startISO || "2024-01-01");
+  if (isNaN(d0.getTime())) d0 = new Date("2024-01-01");
+  for(let i=0;i<n;i++){
+    // Box-Muller for a normal shock.
+    const u1=Math.max(1e-9,rng()), u2=rng();
+    const shock = Math.sqrt(-2*Math.log(u1))*Math.cos(2*Math.PI*u2)*volBase;
+    const regime = 0.01*Math.sin(i/18)*Math.sin(i/5);
+    price = Math.max(1, price*(1+drift+shock+regime));
+    close.push(+price.toFixed(2));
+    volume.push(Math.round((1+Math.abs(shock)*30)*(1e6+rng()*5e6)));
+    const d=new Date(d0); d.setDate(d.getDate()+i);
+    dates.push(d.toISOString().slice(0,10));
+  }
+  return {symbol, dates, close, volume};
+}
+
+// ---------- helpers ----------
+const clip01=v=>Math.min(1,Math.max(0,v));
+const tanh=Math.tanh;
+function std(a){if(a.length<2)return 0;const m=a.reduce((x,y)=>x+y,0)/a.length;return Math.sqrt(a.reduce((s,x)=>s+(x-m)**2,0)/a.length);}
+function normRange(a){const lo=Math.min(...a),hi=Math.max(...a);if(hi-lo<1e-12)return a.map(()=>0);return a.map(x=>2*(x-lo)/(hi-lo)-1);}
+function resample(a,t){if(a.length===t)return a.slice();const out=[];for(let i=0;i<t;i++){const x=i/(t-1)*(a.length-1);const lo=Math.floor(x),hi=Math.min(a.length-1,lo+1);out.push(a[lo]+(a[hi]-a[lo])*(x-lo));}return out;}
+function chunks(n,k){const out=[];const base=Math.floor(n/k),rem=n%k;let idx=0;for(let i=0;i<k;i++){const size=base+(i<rem?1:0);out.push([idx,idx+size]);idx+=size;}return out;}
+
+// ---------- ANALYSIS (mirrors data_to_music.py) ----------
+function extractFeatures(series, nPhrases=12){
+  const close=series.close, vol=series.volume, n=close.length;
+  const rets=[];for(let i=1;i<n;i++)rets.push((close[i]-close[i-1])/close[i-1]);
+  const totalReturn=close[n-1]/close[0]-1;
+  const upDays=rets.length?rets.filter(r=>r>0).length/rets.length:0.5;
+  let trend=tanh(totalReturn*3)*0.6+(upDays-0.5)*2*0.4; trend=Math.max(-1,Math.min(1,trend));
+  const rawVol=std(rets);
+  const avgVol=clip01(tanh(rawVol*40));
+  const maxV=Math.max(...vol,1);
+  const avgVolume=clip01(vol.reduce((a,b)=>a+b,0)/vol.length/maxV);
+  // max drawdown
+  let peak=-Infinity,mdd=0;for(const c of close){peak=Math.max(peak,c);mdd=Math.max(mdd,(peak-c)/peak);}
+  const volRef=rawVol>1e-9?rawVol:1e-9;
+  const phrases=[];
+  chunks(n,nPhrases).forEach(([a,b],i)=>{
+    if(b<=a)return;
+    const sc=close.slice(a,b), sv=vol.slice(a,b);
+    let contour=resample(normRange(sc),8);
+    let mom=0; if(sc.length>=2&&sc[0]!==0)mom=tanh((sc[sc.length-1]/sc[0]-1)*6);
+    let lv=0; if(sc.length>=2){const dr=[];for(let j=1;j<sc.length;j++)dr.push((sc[j]-sc[j-1])/sc[j-1]);lv=std(dr);}
+    const volatility=clip01(lv/(volRef*2.5));
+    const volume=clip01(sv.reduce((x,y)=>x+y,0)/sv.length/maxV);
+    const brightness=Math.max(-1,Math.min(1,0.6*mom+0.4*trend));
+    phrases.push({index:i,contour,momentum:mom,volatility,volume,brightness});
+  });
+  return {symbol:series.symbol,start:series.dates[0],end:series.dates[n-1],nDays:n,
+          trend,avgVol,avgVolume,totalReturn,maxDrawdown:mdd,phrases};
+}
+
+// ---------- COMPOSITION (mirrors composition.py) ----------
+const SCALES={major:[0,2,4,5,7,9,11],minor:[0,2,3,5,7,8,10],dorian:[0,2,3,5,7,9,10]};
+const NOTE_NAMES=["C","C#","D","D#","E","F","F#","G","G#","A","A#","B"];
+const PROG={major:[[0,4],[4,5],[0],[5,1]],minor:[[0],[5],[2],[6]],dorian:[[0],[3],[0],[4]]};
+
+function composer(f, octave=4){
+  const mode = f.trend>0.15?"major":(f.trend<-0.15?"minor":"dorian");
+  const scale=SCALES[mode], prog=PROG[mode];
+  const pc=seedFromSymbol(f.symbol)*2654435761 % 12; // deterministic pitch class
+  const keyRoot=12*(octave+1)+((pc%12+12)%12);
+  const tempo=60+48*f.avgVol;
+  const keyName=NOTE_NAMES[keyRoot%12];
+
+  const deg2pitch=(deg,oct=0)=>{const nn=scale.length;const o=Math.floor(deg/nn)+oct;const st=scale[((deg%nn)+nn)%nn];return keyRoot+12*o+st;};
+  const snap=(contour,span)=>contour.map(c=>Math.round((c+1)/2*span));
+
+  function buildMotif(p){let d=snap(p.contour,4);if(d.length>=4){const idx=[0,1,2,3].map(i=>Math.round(i/3*(d.length-1)));d=idx.map(i=>d[i]);}else{while(d.length<4)d.push(0);}return d;}
+  function develop(m,p){let x=m.slice();if(p.momentum<-0.2){const pv=x[0];x=x.map(d=>pv-(d-pv));}const sh=Math.round(p.momentum*2);x=x.map(d=>d+sh);if(p.volatility>0.5)x=x.map(d=>Math.round(d*1.5));return x;}
+  function rhythm(p,beats){let n=Math.round(2+6*p.volatility);n=Math.max(2,Math.min(8,n));const base=beats/n;const ds=[];for(let i=0;i<n;i++)ds.push(p.volatility<0.3&&i===n-1?base*1.5:base);const sc=beats/ds.reduce((a,b)=>a+b,0);return ds.map(d=>d*sc);}
+  function chord(root,p){let degs=[root,root+2,root+4];if(p.volatility>0.35)degs.push(root+6);if(p.volatility>0.7)degs.push(root+8);return degs.map(d=>deg2pitch(d,-1));}
+  const vel=(p,a=1)=>Math.max(20,Math.min(120,Math.round((40+72*p.volume)*a)));
+
+  function formPlan(n){if(n<3)return [...Array(n)].map((_,i)=>[i,"A"]);const ae=Math.max(1,Math.floor(n/3)),be=Math.max(ae+1,Math.floor(2*n/3));const pl=[];for(let i=0;i<n;i++)pl.push([i,i<ae?"A":(i<be?"B":"A'")]);return pl;}
+
+  function compose(){
+    const beats=8, notes=[]; const ph=f.phrases; if(!ph.length)return {notes,tempo,keyName,mode};
+    const motif=buildMotif(ph[0]); const plan=formPlan(ph.length); let t=0;
+    for(const [pi,sec] of plan){
+      const p=ph[pi];
+      const pm = sec==="A"?motif.slice():develop(motif,p);
+      // melody
+      const rh=rhythm(p,beats); let tt=t;
+      rh.forEach((dur,i)=>{
+        const deg=pm[i%pm.length];
+        const cpos=Math.round(i/Math.max(1,rh.length-1)*(p.contour.length-1));
+        const micro=Math.round(p.contour[cpos]);
+        notes.push({pitch:deg2pitch(deg+micro,1),start:tt,duration:dur*0.95,velocity:vel(p,i===0?1:0.85),voice:"melody"});
+        tt+=dur;
+      });
+      // harmony
+      const roots=prog[p.index%prog.length];
+      roots.forEach(rd=>chord(rd,p).forEach(pp=>notes.push({pitch:pp,start:t,duration:beats,velocity:vel(p,0.6),voice:"harmony"})));
+      // bass ostinato
+      let dens=Math.round(2+6*(0.6*p.volume+0.4*p.volatility));dens=Math.max(2,Math.min(8,dens));
+      const step=beats/dens, pat=[0,4,7,2];
+      for(let i=0;i<dens;i++)notes.push({pitch:deg2pitch(roots[0]+pat[i%pat.length],-2),start:t+i*step,duration:step*0.9,velocity:vel(p,0.5),voice:"bass"});
+      t+=beats;
+    }
+    // final cadence
+    const lp=ph[ph.length-1], cv=vel(lp,0.7);
+    [[-2,"bass"],[-1,"harmony"],[1,"melody"]].forEach(([o,voice])=>{(o===-2?[0]:[0,2,4]).forEach(d=>notes.push({pitch:deg2pitch(d,o),start:t,duration:6,velocity:cv,voice}));});
+    return {notes,tempo,keyName,mode};
+  }
+  return {compose,keyName,mode,tempo};
+}
+
+// ---------- ANALYST (mirrors analyst.py grounded narration) ----------
+function analyze(f, score){
+  const ret=f.totalReturn*100;
+  const trendWord=f.trend>0.4?"a confident bull market":f.trend>0.05?"a gently rising market":
+    f.trend>-0.05?"a directionless, sideways market":f.trend>-0.4?"a declining market":"a steep bear market";
+  const tempoWord=score.tempo<72?"meditative":score.tempo<90?"flowing":"agitated";
+  const volWord=f.avgVol<0.34?"low volatility, so the harmony stays consonant and the phrases are long and calm":
+    f.avgVol<0.67?"moderate volatility, colouring the chords with added 7ths and a more active rhythm":
+    "high volatility, pushing the harmony toward dissonant 9ths, wide melodic leaps and restless rhythm";
+  const dynWord=f.avgVolume<0.34?"quiet, sparse textures":f.avgVolume>0.66?"a full-bodied dynamic":"a moderate dynamic";
+  const ph=f.phrases, describe=p=>{const v=p.volatility>0.66?"turbulent":p.volatility>0.33?"restless":"calm";const m=p.momentum>0.15?"rising":p.momentum<-0.15?"falling":"sideways";return v+", "+m;};
+  const paras=[];
+  paras.push(`The ${f.symbol} Sonata is written in ${score.keyName} ${score.mode}, a ${tempoWord} ${Math.round(score.tempo)} BPM. That key was not chosen at random: over the selected window the asset ${ret>=0?"gained":"lost"} ${Math.abs(ret).toFixed(1)}% across ${f.nDays} trading days — ${trendWord} — and Market Sonata maps a rising market to major tonality, a falling market to minor, and an undecided market to the ambiguous colour of the Dorian mode.`);
+  paras.push(`Volatility during the period registered as ${volWord}. Trading volume translated into ${dynWord}: the louder the market's participation, the fuller the piano writing.`);
+  if(ph.length){
+    let arc=`Structurally the work follows an A–B–A′ arch across ${ph.length} phrases. The opening theme is drawn from the first phrase (${describe(ph[0])}); the central development departs from it as the market grows ${describe(ph[Math.floor(ph.length/2)])}; and the recapitulation returns home (${describe(ph[ph.length-1])}), transformed by everything in between.`;
+    if(f.maxDrawdown*100>12)arc+=` The deepest drawdown of the window (−${(f.maxDrawdown*100).toFixed(1)}%) is felt as the emotional low point of the central section, where the motif is inverted and the harmony is at its most unstable.`;
+    paras.push(arc);
+  }
+  const voices=[...new Set(score.notes.map(n=>n.voice))];
+  paras.push(`A single four-note motif, derived from the shape of the earliest price movement, recurs throughout — transposed, inverted and fragmented — so the ear can follow one idea through the whole piece. The finished score contains ${score.notes.length} notes across ${voices.length} voices (${voices.join(", ")}), rendered as solo piano to keep the work in an intimate, human register.`);
+  return paras;
+}
+
+// ---------- MIDI file writer (Standard MIDI File, type 1) ----------
+function writeMidi(score){
+  const PPQ=480;
+  const vlq=n=>{let b=[n&0x7f];n>>=7;while(n>0){b.unshift((n&0x7f)|0x80);n>>=7;}return b;};
+  function track(notes){
+    const evs=[];
+    notes.forEach(n=>{
+      const s=Math.round(n.start*PPQ), e=Math.round((n.start+n.duration)*PPQ);
+      evs.push({t:s,on:true,p:n.pitch,v:n.velocity});
+      evs.push({t:e,on:false,p:n.pitch,v:0});
+    });
+    evs.sort((a,b)=>a.t-b.t||(a.on?1:0)-(b.on?1:0));
+    let bytes=[], last=0;
+    evs.forEach(ev=>{
+      const dt=ev.t-last; last=ev.t;
+      bytes=bytes.concat(vlq(dt));
+      bytes.push(ev.on?0x90:0x80, ev.p&0x7f, ev.v&0x7f);
+    });
+    bytes=bytes.concat([0,0xFF,0x2F,0]); // end of track
+    return bytes;
+  }
+  function chunk(id,data){const len=data.length;return [...id].map(c=>c.charCodeAt(0)).concat([(len>>24)&255,(len>>16)&255,(len>>8)&255,len&255],data);}
+  // tempo meta
+  const usPerBeat=Math.round(60000000/score.tempo);
+  const tempoTrk=chunk("MTrk",[0,0xFF,0x51,3,(usPerBeat>>16)&255,(usPerBeat>>8)&255,usPerBeat&255,0,0xFF,0x2F,0]);
+  const voices={melody:[],harmony:[],bass:[]};
+  score.notes.forEach(n=>voices[n.voice].push(n));
+  const header=chunk("MThd",[0,1,0,4,(PPQ>>8)&255,PPQ&255]);
+  let all=header.concat(tempoTrk);
+  ["melody","harmony","bass"].forEach(v=>{all=all.concat(chunk("MTrk",track(voices[v])));});
+  return new Uint8Array(all);
+}
+
+/* ===================== UI wiring ===================== */
+const $=id=>document.getElementById(id);
+const PRESETS=["AAPL","TSLA","SPY","NVDA","BTC-USD","MSFT"];
+let current=null, playing=false, playHandle=null, rollProgress=0, rafId=null, playStart=0, playDur=0;
+
+// presets
+PRESETS.forEach(p=>{const b=document.createElement("button");b.className="chip";b.textContent=p;b.onclick=()=>{$("symbol").value=p;syncChips();};$("presets").appendChild(b);});
+function syncChips(){[...$("presets").children].forEach(c=>c.classList.toggle("on",c.textContent===$("symbol").value.toUpperCase()));}
+$("symbol").addEventListener("input",syncChips); syncChips();
+
+// canvas drawing
+function dpiCanvas(cv,h){const w=cv.clientWidth||600;const r=window.devicePixelRatio||1;cv.width=w*r;cv.height=h*r;const ctx=cv.getContext("2d");ctx.setTransform(r,0,0,r,0,0);return {ctx,w,h};}
+function lineChart(cv,data,color,fill){const {ctx,w,h}=dpiCanvas(cv,cv.getAttribute("height")*1);ctx.clearRect(0,0,w,h);const lo=Math.min(...data),hi=Math.max(...data),rng=hi-lo||1;const X=i=>i/(data.length-1)*(w-6)+3,Y=v=>h-4-((v-lo)/rng)*(h-8);ctx.beginPath();data.forEach((v,i)=>{const x=X(i),y=Y(v);i?ctx.lineTo(x,y):ctx.moveTo(x,y);});ctx.strokeStyle=color;ctx.lineWidth=2;ctx.stroke();ctx.lineTo(X(data.length-1),h);ctx.lineTo(X(0),h);ctx.closePath();ctx.fillStyle=fill;ctx.fill();}
+function barChart(cv,data,color){const {ctx,w,h}=dpiCanvas(cv,cv.getAttribute("height")*1);ctx.clearRect(0,0,w,h);const hi=Math.max(...data)||1;const bw=w/data.length;ctx.fillStyle=color;data.forEach((v,i)=>{const bh=(v/hi)*(h-6);ctx.fillRect(i*bw,h-bh,Math.max(1,bw-0.5),bh);});}
+
+const VOICE_COLOR={melody:"#d9b26a",harmony:"#7aa2d1",bass:"#c97b84"};
+function drawRoll(){
+  const cv=$("rollCv"); const {ctx,w,h}=dpiCanvas(cv,220);
+  ctx.clearRect(0,0,w,h);
+  if(!current)return;
+  const notes=current.score.notes;
+  const pitches=notes.map(n=>n.pitch); const lo=Math.min(...pitches),hi=Math.max(...pitches),range=Math.max(1,hi-lo);
+  const end=Math.max(...notes.map(n=>n.start+n.duration),1); const rowH=h/(range+2);
+  notes.forEach(n=>{const x=n.start/end*w,ww=Math.max(1.5,n.duration/end*w),y=h-(n.pitch-lo+1)*rowH;
+    ctx.fillStyle=VOICE_COLOR[n.voice];ctx.globalAlpha=0.35+n.velocity/127*0.6;ctx.fillRect(x,y,ww,Math.max(2,rowH-1));});
+  ctx.globalAlpha=1;ctx.fillStyle="rgba(255,255,255,.75)";ctx.fillRect(rollProgress*w,0,2,h);
+}
+
+function render(){
+  $("emptyState").style.display="none";
+  ["chartsCard","playerCard","analystCard"].forEach(id=>$(id).style.display="block");
+  const {series,feat,score}=current;
+  $("portraitTitle").textContent=`${series.symbol} — Market Portrait`;
+  lineChart($("priceCv"),series.close,"#d9b26a","rgba(217,178,106,.08)");
+  lineChart($("volCv"),feat.phrases.length?series.close.map((_,i)=>0):[],"#c97b84","rgba(201,123,132,.08)"); // placeholder replaced below
+  // volatility rolling
+  const roll=[];const rets=series.close.map((c,i)=>i?(c-series.close[i-1])/series.close[i-1]:0);
+  for(let i=0;i<rets.length;i++){const seg=rets.slice(Math.max(0,i-9),i+1);roll.push(std(seg));}
+  lineChart($("volCv"),roll,"#c97b84","rgba(201,123,132,.08)");
+  barChart($("volumeCv"),series.volume,"rgba(122,162,209,.5)");
+
+  $("sonataTitle").textContent=`${series.symbol} Sonata`;
+  $("sonataMeta").textContent=`${score.keyName} ${score.mode} · ${Math.round(score.tempo)} BPM · ${score.notes.length} notes`;
+  drawRoll();
+
+  // analyst
+  $("noteBody").innerHTML=analyze(feat,score).map(p=>`<p>${p}</p>`).join("");
+  const stats=[["Trend",feat.trend>0.4?"major":feat.trend>0.05?"major (tentative)":feat.trend>-0.05?"modal / ambiguous":feat.trend>-0.4?"minor":"minor (dark)"],
+    ["Total return",(feat.totalReturn*100).toFixed(1)+"%"],["Avg. volatility",Math.round(feat.avgVol*100)+"%"],
+    ["Avg. volume",Math.round(feat.avgVolume*100)+"%"],["Max drawdown","−"+(feat.maxDrawdown*100).toFixed(1)+"%"],
+    ["Phrases",String(feat.phrases.length)]];
+  $("statsBox").innerHTML=stats.map(([k,v])=>`<div class="stat"><div class="k">${k}</div><div class="v">${v}</div></div>`).join("");
+
+  // MIDI download
+  const bytes=writeMidi(score); const blob=new Blob([bytes],{type:"audio/midi"});
+  const url=URL.createObjectURL(blob); const a=$("dlBtn"); a.href=url; a.download=`${series.symbol}_sonata.mid`;
+}
+
+function doCompose(){
+  const sym=$("symbol").value.trim().toUpperCase()||"AAPL";
+  const series=syntheticSeries(sym,$("start").value);
+  const feat=extractFeatures(series,12);
+  const score=composer(feat).compose();
+  current={series,feat,score};
+  stopPlayback();
+  render();
+}
+$("composeBtn").onclick=doCompose;
+
+// ---------- playback via Tone.js ----------
+let synth=null;
+function getSynth(){if(!synth){const rev=new Tone.Reverb({decay:3.2,wet:0.25}).toDestination();synth=new Tone.PolySynth(Tone.Synth,{oscillator:{type:"triangle"},envelope:{attack:0.02,decay:0.4,sustain:0.25,release:1.6}}).connect(rev);synth.volume.value=-8;}return synth;}
+const VGAIN={melody:0,harmony:-6,bass:-3};
+async function playScore(){
+  await Tone.start(); const s=getSynth();
+  Tone.Transport.stop();Tone.Transport.cancel();
+  const score=current.score; Tone.Transport.bpm.value=score.tempo;
+  const spb=60/score.tempo; let endBeat=0;
+  score.notes.forEach(n=>{
+    const startS=n.start*spb, durS=Math.max(0.05,n.duration*spb);
+    const freq=Tone.Frequency(n.pitch,"midi").toFrequency();
+    const v=Math.max(0.05,Math.min(1,n.velocity/127))*Math.pow(10,(VGAIN[n.voice]||0)/20);
+    Tone.Transport.schedule(t=>s.triggerAttackRelease(freq,durS,t,v),startS);
+    endBeat=Math.max(endBeat,n.start+n.duration);
+  });
+  playDur=endBeat*spb+0.5; playStart=performance.now();
+  Tone.Transport.schedule(()=>{Tone.Draw.schedule(()=>stopPlayback(),0);},playDur);
+  Tone.Transport.start();
+  playing=true; $("playBtn").textContent="◼ Stop";
+  const tick=()=>{if(!playing)return;rollProgress=Math.min(1,(performance.now()-playStart)/1000/playDur);drawRoll();rafId=requestAnimationFrame(tick);};
+  tick();
+}
+function stopPlayback(){playing=false;$("playBtn").textContent="▶ Play";try{Tone.Transport.stop();Tone.Transport.cancel();synth&&synth.releaseAll();}catch(e){}if(rafId)cancelAnimationFrame(rafId);rollProgress=0;drawRoll();}
+$("playBtn").onclick=()=>{playing?stopPlayback():playScore();};
+
+window.addEventListener("resize",()=>{if(current)render();});
+// compose one on load so there's something to hear immediately
+doCompose();
+</script>
+</body>
+</html>
