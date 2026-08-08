@@ -24,7 +24,10 @@ import os
 from typing import List, Optional
 
 # Make the sibling music_engine package importable when run from /backend.
-sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+# APPEND rather than insert(0): the repository root contains its own main.py,
+# and putting the root first made `import main` resolve to that script instead
+# of this module — which broke `python main.py` with "Attribute 'app' not found".
+sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 from fastapi import FastAPI, HTTPException, Query
 from fastapi.middleware.cors import CORSMiddleware

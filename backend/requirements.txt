@@ -5,8 +5,16 @@ fastapi==0.115.0
 uvicorn[standard]==0.30.6
 pydantic==2.9.2
 
-# Market data
-yfinance==0.2.44
+# Market data.
+# The PRIMARY path in market_data.py calls Yahoo's public chart endpoint with
+# nothing but the standard library, because pinned yfinance releases keep
+# breaking against Yahoo's API (0.2.44 raised JSONDecodeError on every call,
+# which silently downgraded the whole app to synthetic prices).
+# yfinance is now only a secondary fallback and the import is guarded, so a
+# lower bound is deliberate rather than an exact pin: it lets pip backtrack to
+# whatever release actually resolves against the numpy pin below, instead of
+# failing the build over a dependency the app can run without.
+yfinance>=0.2.65
 
 # Music generation
 pretty_midi==0.2.10
