@@ -10,7 +10,6 @@ yfinance==0.2.44
 
 # Music generation
 pretty_midi==0.2.10
-music21==9.1.0
 numpy==1.26.4
 
 # Optional: enables the LLM-polished analyst (set ANTHROPIC_API_KEY)

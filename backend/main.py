@@ -28,6 +28,7 @@ sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 from fastapi import FastAPI, HTTPException, Query
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.responses import FileResponse
 from pydantic import BaseModel, Field
 
 from market_data import fetch_market_data
@@ -89,6 +90,17 @@ class ComposeResponse(BaseModel):
 # ---------------------------------------------------------------------------
 # Routes
 # ---------------------------------------------------------------------------
+
+_STANDALONE = os.path.join(
+    os.path.dirname(os.path.dirname(os.path.abspath(__file__))),
+    "standalone.html",
+)
+
+
+@app.get("/", include_in_schema=False)
+def home():
+    return FileResponse(_STANDALONE, media_type="text/html")
+
 
 @app.get("/api/health")
 def health():

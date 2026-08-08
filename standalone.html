@@ -82,8 +82,9 @@
   </header>
   <p class="mist" style="margin:0;max-width:640px;font-weight:300;">
     A generative music system translating financial markets into musical narratives.
-    This is a fully offline single-file demo — it synthesises a deterministic market
-    for each symbol and composes a piano sonata from it in your browser.
+    It pulls <span class="gold">live Yahoo Finance</span> data and re-composes as the
+    market changes; if live data is unavailable it falls back to a deterministic
+    synthetic market so the demo always works.
   </p>
 
   <div class="grid">
@@ -99,8 +100,13 @@
           <div><label>To</label><input id="end" type="date" value="2024-12-31" /></div>
         </div>
         <button class="primary" id="composeBtn">Compose Sonata</button>
-        <p class="badge" style="margin-top:10px">
-          Demo uses deterministic <em>synthetic</em> data so it runs with no server.
+        <label style="display:flex;align-items:center;gap:8px;margin-top:14px;cursor:pointer;text-transform:none;letter-spacing:normal;font-size:12px;color:#a7adc4">
+          <input type="checkbox" id="liveToggle" style="width:auto;margin:0" />
+          <span id="liveDot" style="display:inline-block;width:8px;height:8px;border-radius:999px;background:#5a5f78"></span>
+          Auto-refresh (live) every 60s
+        </label>
+        <p class="badge" id="liveStatus" style="margin-top:8px">
+          Reads live Yahoo Finance data when the backend is reachable.
         </p>
       </div>
 
@@ -340,6 +346,24 @@ function writeMidi(score){
   return new Uint8Array(all);
 }
 
+/* ===================== live data (backend → Yahoo Finance) ===================== */
+// Served by the FastAPI backend: same origin in production, :8000 when this
+// file is opened directly from disk (python backend/main.py).
+const API_BASE = location.protocol === "file:" ? "http://localhost:8000" : "";
+const REFRESH_MS = 60000;
+
+// Fetch a real series from the backend. Throws if the backend is unreachable.
+async function fetchSeries(sym, start, end){
+  const url = `${API_BASE}/api/market?symbol=${encodeURIComponent(sym)}`
+            + `&start=${encodeURIComponent(start)}&end=${encodeURIComponent(end)}`;
+  const res = await fetch(url, {cache:"no-store"});
+  if(!res.ok) throw new Error("backend "+res.status);
+  const d = await res.json();
+  if(!d.close || !d.close.length) throw new Error("empty series");
+  // d.source is "yfinance" (real) or "synthetic" (backend's offline fallback).
+  return {symbol:d.symbol, dates:d.dates, close:d.close, volume:d.volume, source:d.source};
+}
+
 /* ===================== UI wiring ===================== */
 const $=id=>document.getElementById(id);
 const PRESETS=["AAPL","TSLA","SPY","NVDA","BTC-USD","MSFT"];
@@ -372,6 +396,11 @@ function render(){
   $("emptyState").style.display="none";
   ["chartsCard","playerCard","analystCard"].forEach(id=>$(id).style.display="block");
   const {series,feat,score}=current;
+  // data-source badge in the Analyst's Note
+  const srcTag=$("srcTag");
+  if(series.source==="yfinance"){ srcTag.textContent="Yahoo Finance · live"; srcTag.style.color="#8fd1a0"; srcTag.style.borderColor="rgba(143,209,160,.4)"; }
+  else if(series.source==="synthetic"){ srcTag.textContent="backend synthetic fallback"; srcTag.style.color=""; srcTag.style.borderColor=""; }
+  else { srcTag.textContent="offline synthetic (backend unreachable)"; srcTag.style.color=""; srcTag.style.borderColor=""; }
   $("portraitTitle").textContent=`${series.symbol} — Market Portrait`;
   lineChart($("priceCv"),series.close,"#d9b26a","rgba(217,178,106,.08)");
   lineChart($("volCv"),feat.phrases.length?series.close.map((_,i)=>0):[],"#c97b84","rgba(201,123,132,.08)"); // placeholder replaced below
@@ -398,16 +427,61 @@ function render(){
   const url=URL.createObjectURL(blob); const a=$("dlBtn"); a.href=url; a.download=`${series.symbol}_sonata.mid`;
 }
 
-function doCompose(){
-  const sym=$("symbol").value.trim().toUpperCase()||"AAPL";
-  const series=syntheticSeries(sym,$("start").value);
+// Build features + score + view from a series and store it as `current`.
+function composeFrom(series){
   const feat=extractFeatures(series,12);
   const score=composer(feat).compose();
   current={series,feat,score};
+}
+
+// Get a series: try the live backend first, fall back to offline synthetic.
+async function getSeries(sym){
+  try{
+    return await fetchSeries(sym,$("start").value,$("end").value);
+  }catch(e){
+    const s=syntheticSeries(sym,$("start").value);
+    s.source="offline"; // distinguish from the backend's own "synthetic" fallback
+    return s;
+  }
+}
+
+async function doCompose(){
+  const sym=$("symbol").value.trim().toUpperCase()||"AAPL";
+  $("composeBtn").disabled=true; $("composeBtn").textContent="Composing…";
+  const series=await getSeries(sym);
+  composeFrom(series);
   stopPlayback();
   render();
+  $("composeBtn").disabled=false; $("composeBtn").textContent="Compose Sonata";
 }
 $("composeBtn").onclick=doCompose;
+
+/* ---------- live auto-refresh ---------- */
+let liveTimer=null;
+function setLiveDot(state){ // "on" | "poll" | "off"
+  const dot=$("liveDot");
+  dot.style.background = state==="poll" ? "#d9b26a" : state==="on" ? "#8fd1a0" : "#5a5f78";
+}
+async function refreshTick(){
+  if(playing) return;                 // never interrupt playback mid-piece
+  const sym=$("symbol").value.trim().toUpperCase()||"AAPL";
+  setLiveDot("poll");
+  try{
+    const series=await fetchSeries(sym,$("start").value,$("end").value);
+    const changed = !current
+      || current.series.symbol!==series.symbol
+      || current.series.close.length!==series.close.length
+      || current.series.close[current.series.close.length-1]!==series.close[series.close.length-1];
+    if(changed){ composeFrom(series); render(); }
+    $("liveStatus").textContent=`Live · ${series.symbol} · last close ${series.close[series.close.length-1]} · updated ${new Date().toLocaleTimeString()}`;
+  }catch(e){
+    $("liveStatus").textContent="Live data unavailable — showing deterministic synthetic market.";
+  }
+  setLiveDot($("liveToggle").checked ? "on" : "off");
+}
+function startLive(){ stopLive(); setLiveDot("on"); refreshTick(); liveTimer=setInterval(refreshTick,REFRESH_MS); }
+function stopLive(){ if(liveTimer){clearInterval(liveTimer);liveTimer=null;} setLiveDot("off"); }
+$("liveToggle").addEventListener("change",e=>{ e.target.checked?startLive():stopLive(); });
 
 // ---------- playback via Tone.js ----------
 let synth=null;
@@ -436,6 +510,14 @@ function stopPlayback(){playing=false;$("playBtn").textContent="▶ Play";try{To
 $("playBtn").onclick=()=>{playing?stopPlayback():playScore();};
 
 window.addEventListener("resize",()=>{if(current)render();});
+
+// Default the date range to the last ~6 months so live refresh has a moving edge.
+(function initDates(){
+  const day=864e5, today=new Date();
+  $("end").value=today.toISOString().slice(0,10);
+  $("start").value=new Date(today.getTime()-183*day).toISOString().slice(0,10);
+})();
+
 // compose one on load so there's something to hear immediately
 doCompose();
 </script>
