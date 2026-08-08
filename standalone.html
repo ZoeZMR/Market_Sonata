@@ -6,8 +6,9 @@
 <title>Market Sonata — Standalone Demo</title>
 <link rel="preconnect" href="https://fonts.googleapis.com" />
 <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,400;0,600;1,400&family=Inter:wght@300;400;500;600&display=swap" rel="stylesheet" />
-<!-- Tone.js for in-browser piano playback -->
+<!-- Tone.js for in-browser playback, Plotly for interactive charts -->
 <script src="https://cdnjs.cloudflare.com/ajax/libs/tone/15.0.4/Tone.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/plotly.js/2.35.2/plotly-basic.min.js"></script>
 <style>
   :root { color-scheme: dark; }
   * { box-sizing: border-box; }
@@ -26,7 +27,7 @@
   header { display:flex; align-items:baseline; justify-content:space-between; margin-bottom: 8px; flex-wrap: wrap; gap: 8px;}
   h1.display { font-size: 44px; margin: 0; }
   .sub { letter-spacing: .3em; text-transform: uppercase; font-size: 11px; }
-  .grid { display:grid; grid-template-columns: 340px 1fr; gap: 20px; margin-top: 24px; }
+  .grid { display:grid; grid-template-columns: 380px 1fr; gap: 20px; margin-top: 24px; }
   @media (max-width: 900px){ .grid{ grid-template-columns: 1fr; } }
   .card { background: rgba(20,23,38,.7); border:1px solid rgba(255,255,255,.06);
           border-radius: 18px; padding: 20px; backdrop-filter: blur(6px); }
@@ -58,20 +59,23 @@
     padding:9px 20px; border-radius:999px; border:none; background:#d9b26a; color:#0b0d17;
     text-transform:uppercase; letter-spacing:.15em; font-size:12px; font-weight:600; cursor:pointer; font-family:inherit;
   }
-  .chartlbl { font-size:10px; letter-spacing:.2em; text-transform:uppercase; color:#a7adc4; margin-bottom:6px; }
+  .chartlbl { font-size:10px; letter-spacing:.2em; text-transform:uppercase; color:#a7adc4; margin-bottom:2px; }
+  .charthint { font-size:10px; color:#5a5f78; margin:4px 0 0; }
   canvas { width:100%; display:block; border-radius:10px; }
+  .plot { width:100%; }
   .stats { display:grid; grid-template-columns:repeat(3,1fr); gap:10px; margin-top:16px; }
   .stat { background:rgba(30,34,54,.6); border:1px solid rgba(255,255,255,.06); border-radius:10px; padding:8px 10px; }
   .stat .k { font-size:9px; letter-spacing:.2em; text-transform:uppercase; color:#a7adc4; }
   .stat .v { color:#d9b26a; font-weight:600; margin-top:2px; }
   .note p { color:#a7adc4; line-height:1.7; font-weight:300; margin: 0 0 14px; }
-  .legend { display:flex; gap:16px; font-size:12px; color:#a7adc4; margin-top:8px; }
+  .legend { display:flex; gap:14px; font-size:12px; color:#a7adc4; margin-top:8px; flex-wrap:wrap; }
   .sw { display:inline-block; width:12px; height:12px; border-radius:3px; margin-right:5px; vertical-align:middle; }
   .empty { border:1px dashed rgba(255,255,255,.12); border-radius:18px; min-height:320px;
            display:flex; align-items:center; justify-content:center; text-align:center; padding:24px; }
   .tag { font-size:11px; color:#c97b84; border:1px solid rgba(201,123,132,.35); border-radius:999px; padding:3px 10px; }
   .badge { font-size:11px; color:#a7adc4; }
   .space > * + * { margin-top: 20px; }
+  .secnow { font-size:11px; letter-spacing:.25em; text-transform:uppercase; color:#8fd1a0; min-height:14px; margin-top:4px; }
 </style>
 </head>
 <body>
@@ -112,9 +116,10 @@
 
       <div class="card" id="chartsCard" style="display:none">
         <h2 class="display gold" id="portraitTitle">Market Portrait</h2>
-        <div class="chartlbl">Price</div><canvas id="priceCv" height="120"></canvas>
-        <div class="chartlbl" style="margin-top:12px">Volatility</div><canvas id="volCv" height="90"></canvas>
-        <div class="chartlbl" style="margin-top:12px">Volume</div><canvas id="volumeCv" height="90"></canvas>
+        <div class="chartlbl">Price</div><div class="plot" id="priceCh"></div>
+        <div class="chartlbl" style="margin-top:10px">Volatility (10-day, %)</div><div class="plot" id="volCh"></div>
+        <div class="chartlbl" style="margin-top:10px">Volume</div><div class="plot" id="volumeCh"></div>
+        <p class="charthint">hover for values · drag or scroll to zoom · double-click to reset</p>
       </div>
     </div>
 
@@ -132,17 +137,20 @@
           <div>
             <h2 class="display gold" id="sonataTitle">Sonata</h2>
             <div class="sub mist" id="sonataMeta"></div>
+            <div class="secnow" id="secNow"></div>
           </div>
           <div style="display:flex;gap:8px">
             <button class="btn-play" id="playBtn">▶ Play</button>
             <a class="btn-ghost" id="dlBtn" download="sonata.mid">↓ MIDI</a>
           </div>
         </div>
-        <canvas id="rollCv" height="220" style="margin-top:14px;background:rgba(11,13,23,.6);border:1px solid rgba(255,255,255,.06)"></canvas>
+        <canvas id="rollCv" height="250" style="margin-top:14px;background:rgba(11,13,23,.6);border:1px solid rgba(255,255,255,.06)"></canvas>
         <div class="legend">
-          <span><span class="sw" style="background:#d9b26a"></span>melody</span>
-          <span><span class="sw" style="background:#7aa2d1"></span>harmony</span>
+          <span><span class="sw" style="background:#d9b26a"></span>lead</span>
+          <span><span class="sw" style="background:#7aa2d1"></span>pad</span>
           <span><span class="sw" style="background:#c97b84"></span>bass</span>
+          <span><span class="sw" style="background:#8fd1a0"></span>arpeggio</span>
+          <span><span class="sw" style="background:#8a8fa8"></span>drums</span>
         </div>
       </div>
 
@@ -158,14 +166,15 @@
   </div>
 
   <p class="mist" style="text-align:center;margin-top:48px;font-size:12px;opacity:.6">
-    Market Sonata · standalone demo · Hisaishi · Glass · Richter
+    Market Sonata · standalone demo · every market becomes a song
   </p>
 </div>
 
 <script>
+/*ENGINE-START*/
 /* =====================================================================
-   Market Sonata — standalone JS port of the Python music engine.
-   Layers mirror the repo: data → features → composition → MIDI + analyst.
+   Market Sonata — music engine (pure functions, no DOM).
+   data → features → song-form composition → MIDI + analyst.
    ===================================================================== */
 
 // ---------- deterministic RNG (mulberry32) ----------
@@ -233,119 +242,246 @@ function extractFeatures(series, nPhrases=12){
           trend,avgVol,avgVolume,totalReturn,maxDrawdown:mdd,phrases};
 }
 
-// ---------- COMPOSITION (mirrors composition.py) ----------
+// ---------- COMPOSITION: song form (Intro → Verse → Chorus → Bridge → Outro) ----------
 const SCALES={major:[0,2,4,5,7,9,11],minor:[0,2,3,5,7,8,10],dorian:[0,2,3,5,7,9,10]};
 const NOTE_NAMES=["C","C#","D","D#","E","F","F#","G","G#","A","A#","B"];
-const PROG={major:[[0,4],[4,5],[0],[5,1]],minor:[[0],[5],[2],[6]],dorian:[[0],[3],[0],[4]]};
+// Chord roots as scale degrees, one chord per bar, cycled inside each section.
+const PROGS={
+  major:{intro:[0],verse:[0,5,3,4],chorus:[0,4,5,3],bridge:[3,4],outro:[0]},
+  minor:{intro:[0],verse:[0,5,2,6],chorus:[0,2,5,6],bridge:[3,4],outro:[0]},
+  dorian:{intro:[0],verse:[0,3,0,4],chorus:[0,3,4,3],bridge:[5,3],outro:[0]},
+};
+// The song form. `at` places each section on the market timeline (0..1) so
+// verses stay chronological while the form itself is fixed and singable.
+const FORM=[
+  {name:"Intro",  kind:"intro",  bars:4, at:0.0},
+  {name:"Verse 1",kind:"verse",  bars:8, at:0.12},
+  {name:"Chorus", kind:"chorus", bars:8, at:0.38},
+  {name:"Verse 2",kind:"verse",  bars:8, at:0.55},
+  {name:"Bridge", kind:"bridge", bars:4, at:0.75},
+  {name:"Chorus", kind:"chorus", bars:8, at:0.9},
+  {name:"Outro",  kind:"outro",  bars:4, at:1.0},
+];
 
 function composer(f, octave=4){
   const mode = f.trend>0.15?"major":(f.trend<-0.15?"minor":"dorian");
-  const scale=SCALES[mode], prog=PROG[mode];
+  const scale=SCALES[mode], progs=PROGS[mode];
   const pc=seedFromSymbol(f.symbol)*2654435761 % 12; // deterministic pitch class
   const keyRoot=12*(octave+1)+((pc%12+12)%12);
-  const tempo=60+48*f.avgVol;
+  const tempo=84+44*f.avgVol;
   const keyName=NOTE_NAMES[keyRoot%12];
 
   const deg2pitch=(deg,oct=0)=>{const nn=scale.length;const o=Math.floor(deg/nn)+oct;const st=scale[((deg%nn)+nn)%nn];return keyRoot+12*o+st;};
+  const vel=(p,a=1)=>Math.max(20,Math.min(120,Math.round((40+72*p.volume)*a)));
+  const clampV=v=>Math.max(15,Math.min(125,Math.round(v)));
   const snap=(contour,span)=>contour.map(c=>Math.round((c+1)/2*span));
+  const energy=p=>0.5*p.volatility+0.5*p.volume;
 
   function buildMotif(p){let d=snap(p.contour,4);if(d.length>=4){const idx=[0,1,2,3].map(i=>Math.round(i/3*(d.length-1)));d=idx.map(i=>d[i]);}else{while(d.length<4)d.push(0);}return d;}
   function develop(m,p){let x=m.slice();if(p.momentum<-0.2){const pv=x[0];x=x.map(d=>pv-(d-pv));}const sh=Math.round(p.momentum*2);x=x.map(d=>d+sh);if(p.volatility>0.5)x=x.map(d=>Math.round(d*1.5));return x;}
   function rhythm(p,beats){let n=Math.round(2+6*p.volatility);n=Math.max(2,Math.min(8,n));const base=beats/n;const ds=[];for(let i=0;i<n;i++)ds.push(p.volatility<0.3&&i===n-1?base*1.5:base);const sc=beats/ds.reduce((a,b)=>a+b,0);return ds.map(d=>d*sc);}
-  function chord(root,p){let degs=[root,root+2,root+4];if(p.volatility>0.35)degs.push(root+6);if(p.volatility>0.7)degs.push(root+8);return degs.map(d=>deg2pitch(d,-1));}
-  const vel=(p,a=1)=>Math.max(20,Math.min(120,Math.round((40+72*p.volume)*a)));
-
-  function formPlan(n){if(n<3)return [...Array(n)].map((_,i)=>[i,"A"]);const ae=Math.max(1,Math.floor(n/3)),be=Math.max(ae+1,Math.floor(2*n/3));const pl=[];for(let i=0;i<n;i++)pl.push([i,i<ae?"A":(i<be?"B":"A'")]);return pl;}
+  const triad=(root,p)=>{const ds=[root,root+2,root+4];if(p.volatility>0.45)ds.push(root+6);return ds;};
 
   function compose(){
-    const beats=8, notes=[]; const ph=f.phrases; if(!ph.length)return {notes,tempo,keyName,mode};
-    const motif=buildMotif(ph[0]); const plan=formPlan(ph.length); let t=0;
-    for(const [pi,sec] of plan){
-      const p=ph[pi];
-      const pm = sec==="A"?motif.slice():develop(motif,p);
-      // melody
-      const rh=rhythm(p,beats); let tt=t;
-      rh.forEach((dur,i)=>{
-        const deg=pm[i%pm.length];
-        const cpos=Math.round(i/Math.max(1,rh.length-1)*(p.contour.length-1));
-        const micro=Math.round(p.contour[cpos]);
-        notes.push({pitch:deg2pitch(deg+micro,1),start:tt,duration:dur*0.95,velocity:vel(p,i===0?1:0.85),voice:"melody"});
-        tt+=dur;
-      });
-      // harmony
-      const roots=prog[p.index%prog.length];
-      roots.forEach(rd=>chord(rd,p).forEach(pp=>notes.push({pitch:pp,start:t,duration:beats,velocity:vel(p,0.6),voice:"harmony"})));
-      // bass ostinato
-      let dens=Math.round(2+6*(0.6*p.volume+0.4*p.volatility));dens=Math.max(2,Math.min(8,dens));
-      const step=beats/dens, pat=[0,4,7,2];
-      for(let i=0;i<dens;i++)notes.push({pitch:deg2pitch(roots[0]+pat[i%pat.length],-2),start:t+i*step,duration:step*0.9,velocity:vel(p,0.5),voice:"bass"});
-      t+=beats;
+    const notes=[], sections=[];
+    const ph=f.phrases;
+    if(!ph.length) return {notes,tempo,keyName,mode,sections,totalBeats:0};
+    const pAt=fr=>ph[Math.max(0,Math.min(ph.length-1,Math.round(fr*(ph.length-1))))];
+
+    // The chorus hook is distilled from the MOST ENERGETIC stretch of the
+    // window — the market's loudest moment becomes the part you remember.
+    const hookP=ph.reduce((a,b)=>energy(b)>=energy(a)?b:a,ph[0]);
+    const hookDegs=snap(hookP.contour,5);
+    const HOOK_R=[1,0.5,0.5,1,0.5,0.5,1,3]; // 2 bars
+    const motif=buildMotif(ph[0]);
+    // Drum intensity follows overall volatility + participation.
+    const dv=0.55+0.45*clip01(0.5*f.avgVol+0.5*f.avgVolume);
+    const drum=(voice,beat,v)=>notes.push({pitch:voice==="kick"?36:voice==="snare"?38:42,start:beat,duration:0.25,velocity:clampV(v*dv),voice});
+
+    let t=0, chorusCount=0;
+    for(const sec of FORM){
+      const p = sec.kind==="outro" ? ph[0] : pAt(sec.at); // outro returns home
+      const prog=progs[sec.kind];
+      const secStart=t;
+      let finalChorus=false;
+      if(sec.kind==="chorus"){chorusCount++;finalChorus=chorusCount===2;}
+
+      // ---- per-bar accompaniment: pad, bass, arp, drums ----
+      for(let b=0;b<sec.bars;b++){
+        const bar=secStart+b*4;
+        const root=prog[b%prog.length];
+        const chordDegs=triad(root,p);
+
+        // pad (sustained chords; softer in verses, richer in the chorus)
+        const padA = sec.kind==="verse"?0.35 : sec.kind==="chorus"?0.55 : 0.45;
+        chordDegs.forEach(d=>notes.push({pitch:deg2pitch(d,0),start:bar,duration:4,velocity:vel(p,padA),voice:"pad"}));
+        if(sec.kind==="chorus")notes.push({pitch:deg2pitch(root+7,0),start:bar,duration:4,velocity:vel(p,0.4),voice:"pad"});
+
+        // bass
+        const bp=deg2pitch(root,-2);
+        if(sec.kind==="intro"||sec.kind==="outro"){
+          notes.push({pitch:bp,start:bar,duration:4,velocity:vel(p,0.5),voice:"bass"});
+        } else if(sec.kind==="bridge"){
+          [0,2].forEach(o=>notes.push({pitch:bp,start:bar+o,duration:2,velocity:vel(p,0.55),voice:"bass"}));
+        } else if(sec.kind==="verse"){
+          notes.push({pitch:bp,start:bar,duration:1.5,velocity:vel(p,0.6),voice:"bass"});
+          notes.push({pitch:bp,start:bar+2,duration:1,velocity:vel(p,0.5),voice:"bass"});
+          notes.push({pitch:deg2pitch(root+4,-2),start:bar+3,duration:1,velocity:vel(p,0.45),voice:"bass"});
+        } else { // chorus: pumping eighths with an octave pop
+          for(let i=0;i<8;i++)notes.push({pitch:i%4===3?deg2pitch(root,-1):bp,start:bar+i*0.5,duration:0.45,velocity:vel(p,i%2?0.45:0.65),voice:"bass"});
+        }
+
+        // arpeggio (chorus sparkle)
+        if(sec.kind==="chorus"){
+          const ad=[root,root+2,root+4,root+7];
+          for(let i=0;i<8;i++)notes.push({pitch:deg2pitch(ad[i%4],1),start:bar+i*0.5,duration:0.4,velocity:vel(p,0.32),voice:"arp"});
+        }
+
+        // drums
+        if(sec.kind==="verse"||sec.kind==="chorus"){
+          const strong=sec.kind==="chorus";
+          drum("kick",bar,strong?115:100); drum("kick",bar+2,strong?110:95);
+          if(strong&&energy(p)>0.55)drum("kick",bar+2.5,90);
+          drum("snare",bar+1,strong?100:70); drum("snare",bar+3,strong?105:80);
+          for(let i=0;i<8;i++)drum("hat",bar+i*0.5,(i%2===0?55:38)+(strong?12:0));
+          if(b===sec.bars-1){drum("snare",bar+3.5,strong?90:70);drum("snare",bar+3.75,strong?96:76);} // fill into next section
+        } else if(sec.kind==="bridge"){
+          drum("kick",bar,85);
+          if(b===sec.bars-1)for(let i=0;i<8;i++)drum("snare",bar+i*0.5,40+i*9); // rising build
+        } else if(sec.kind==="intro"&&b===sec.bars-1){
+          for(let i=0;i<4;i++)drum("hat",bar+i,40); // count-in pulse
+        }
+      }
+
+      // ---- melody ----
+      if(sec.kind==="intro"){
+        const dur=[2,1,1,4];
+        [0,1].forEach(g=>{let tt=secStart+g*8;const degs=g===0?motif:develop(motif,p);
+          degs.forEach((d,i)=>{notes.push({pitch:deg2pitch(d,1),start:tt,duration:dur[i%4]*0.95,velocity:vel(p,0.5),voice:"melody"});tt+=dur[i%4];});});
+      } else if(sec.kind==="verse"){
+        const groups=sec.bars/2;
+        for(let g=0;g<groups;g++){
+          const gi=Math.max(0,Math.min(ph.length-1,Math.round(sec.at*(ph.length-1))+(g%2)));
+          const gp=ph[gi];
+          const degs=develop(motif,gp), rh=rhythm(gp,8); let tt=secStart+g*8;
+          rh.forEach((durB,i)=>{
+            const cpos=Math.round(i/Math.max(1,rh.length-1)*(gp.contour.length-1));
+            const micro=Math.round(gp.contour[cpos]);
+            notes.push({pitch:deg2pitch(degs[i%degs.length]+micro,1),start:tt,duration:durB*0.9,velocity:vel(gp,i===0?0.95:0.8),voice:"melody"});
+            tt+=durB;
+          });
+        }
+      } else if(sec.kind==="chorus"){
+        const reps=sec.bars/2;
+        for(let r=0;r<reps;r++){
+          let tt=secStart+r*8;
+          hookDegs.forEach((d,i)=>{
+            const landing=r===reps-1&&i===hookDegs.length-1; // resolve home
+            const note={pitch:deg2pitch(landing?0:d,1),start:tt,duration:HOOK_R[i]*0.92,velocity:vel(p,(i===0||i===3)?1:0.85),voice:"melody"};
+            notes.push(note);
+            if(finalChorus)notes.push({...note,pitch:note.pitch+12,velocity:clampV(note.velocity*0.7)}); // octave lift
+            tt+=HOOK_R[i];
+          });
+        }
+      } else if(sec.kind==="bridge"){
+        const inv=motif.map(d=>motif[0]-(d-motif[0])+2); // inverted, lifted a third
+        const dur=[3,2,2,1];
+        [0,1].forEach(g=>{let tt=secStart+g*8;
+          inv.forEach((d,i)=>{notes.push({pitch:deg2pitch(d+(g?1:0),1),start:tt,duration:dur[i%4]*0.95,velocity:vel(p,0.65),voice:"melody"});tt+=dur[i%4];});});
+      } else { // outro: the intro motif returns, slower, fading
+        const dur=[3,2,2,5], fade=[0.6,0.5,0.4,0.3];
+        let tt=secStart;
+        motif.forEach((d,i)=>{notes.push({pitch:deg2pitch(d,1),start:tt,duration:dur[i],velocity:vel(p,fade[i]),voice:"melody"});tt+=dur[i];});
+      }
+
+      t+=sec.bars*4;
+      sections.push({name:sec.name,kind:sec.kind,start:secStart,end:t});
     }
-    // final cadence
-    const lp=ph[ph.length-1], cv=vel(lp,0.7);
-    [[-2,"bass"],[-1,"harmony"],[1,"melody"]].forEach(([o,voice])=>{(o===-2?[0]:[0,2,4]).forEach(d=>notes.push({pitch:deg2pitch(d,o),start:t,duration:6,velocity:cv,voice}));});
-    return {notes,tempo,keyName,mode};
+
+    // final resolution chord
+    const lp=ph[ph.length-1];
+    [[-2,"bass",[0]],[0,"pad",[0,2,4]],[1,"melody",[0]]].forEach(([o,voice,ds])=>
+      ds.forEach(d=>notes.push({pitch:deg2pitch(d,o),start:t,duration:6,velocity:vel(lp,0.6),voice})));
+    return {notes,tempo,keyName,mode,sections,totalBeats:t+6};
   }
   return {compose,keyName,mode,tempo};
 }
 
-// ---------- ANALYST (mirrors analyst.py grounded narration) ----------
+// ---------- ANALYST (grounded narration) ----------
 function analyze(f, score){
   const ret=f.totalReturn*100;
   const trendWord=f.trend>0.4?"a confident bull market":f.trend>0.05?"a gently rising market":
     f.trend>-0.05?"a directionless, sideways market":f.trend>-0.4?"a declining market":"a steep bear market";
-  const tempoWord=score.tempo<72?"meditative":score.tempo<90?"flowing":"agitated";
-  const volWord=f.avgVol<0.34?"low volatility, so the harmony stays consonant and the phrases are long and calm":
-    f.avgVol<0.67?"moderate volatility, colouring the chords with added 7ths and a more active rhythm":
-    "high volatility, pushing the harmony toward dissonant 9ths, wide melodic leaps and restless rhythm";
+  const tempoWord=score.tempo<95?"unhurried":score.tempo<112?"mid-tempo":"driving";
+  const volWord=f.avgVol<0.34?"low volatility, so the harmony stays consonant and the groove is relaxed":
+    f.avgVol<0.67?"moderate volatility, colouring the chords with added 7ths and a busier groove":
+    "high volatility, pushing the harmony toward dissonance and the drums into a restless, driving pattern";
   const dynWord=f.avgVolume<0.34?"quiet, sparse textures":f.avgVolume>0.66?"a full-bodied dynamic":"a moderate dynamic";
-  const ph=f.phrases, describe=p=>{const v=p.volatility>0.66?"turbulent":p.volatility>0.33?"restless":"calm";const m=p.momentum>0.15?"rising":p.momentum<-0.15?"falling":"sideways";return v+", "+m;};
+  const describe=p=>{const v=p.volatility>0.66?"turbulent":p.volatility>0.33?"restless":"calm";const m=p.momentum>0.15?"rising":p.momentum<-0.15?"falling":"sideways";return v+", "+m;};
   const paras=[];
-  paras.push(`The ${f.symbol} Sonata is written in ${score.keyName} ${score.mode}, a ${tempoWord} ${Math.round(score.tempo)} BPM. That key was not chosen at random: over the selected window the asset ${ret>=0?"gained":"lost"} ${Math.abs(ret).toFixed(1)}% across ${f.nDays} trading days — ${trendWord} — and Market Sonata maps a rising market to major tonality, a falling market to minor, and an undecided market to the ambiguous colour of the Dorian mode.`);
-  paras.push(`Volatility during the period registered as ${volWord}. Trading volume translated into ${dynWord}: the louder the market's participation, the fuller the piano writing.`);
-  if(ph.length){
-    let arc=`Structurally the work follows an A–B–A′ arch across ${ph.length} phrases. The opening theme is drawn from the first phrase (${describe(ph[0])}); the central development departs from it as the market grows ${describe(ph[Math.floor(ph.length/2)])}; and the recapitulation returns home (${describe(ph[ph.length-1])}), transformed by everything in between.`;
-    if(f.maxDrawdown*100>12)arc+=` The deepest drawdown of the window (−${(f.maxDrawdown*100).toFixed(1)}%) is felt as the emotional low point of the central section, where the motif is inverted and the harmony is at its most unstable.`;
+  paras.push(`The ${f.symbol} song is written in ${score.keyName} ${score.mode}, a ${tempoWord} ${Math.round(score.tempo)} BPM. That key was not chosen at random: over the selected window the asset ${ret>=0?"gained":"lost"} ${Math.abs(ret).toFixed(1)}% across ${f.nDays} trading days — ${trendWord} — and Market Sonata maps a rising market to major tonality, a falling market to minor, and an undecided market to the ambiguous colour of the Dorian mode.`);
+  paras.push(`Volatility during the period registered as ${volWord}. Trading volume translated into ${dynWord}: the louder the market's participation, the fuller the arrangement and the harder the drums hit.`);
+  if(f.phrases.length){
+    const energy=p=>0.5*p.volatility+0.5*p.volume;
+    const hookP=f.phrases.reduce((a,b)=>energy(b)>=energy(a)?b:a,f.phrases[0]);
+    let arc=`It unfolds in classic song form — Intro → Verse → Chorus → Verse → Bridge → Chorus → Outro. The verses walk through the market chronologically (opening ${describe(f.phrases[0])}); the chorus hook is distilled from the most energetic stretch of the window (${describe(hookP)}) and repeats so the market's loudest moment becomes the part you remember; and the outro brings the opening motif home, transformed.`;
+    if(f.maxDrawdown*100>12)arc+=` The bridge marks the emotional turn: the window's deepest drawdown (−${(f.maxDrawdown*100).toFixed(1)}%) is where the motif is inverted and the harmony grows unstable before the final chorus lifts an octave.`;
     paras.push(arc);
   }
-  const voices=[...new Set(score.notes.map(n=>n.voice))];
-  paras.push(`A single four-note motif, derived from the shape of the earliest price movement, recurs throughout — transposed, inverted and fragmented — so the ear can follow one idea through the whole piece. The finished score contains ${score.notes.length} notes across ${voices.length} voices (${voices.join(", ")}), rendered as solo piano to keep the work in an intimate, human register.`);
+  const pitched=[...new Set(score.notes.filter(n=>!["kick","snare","hat"].includes(n.voice)).map(n=>n.voice))];
+  paras.push(`The arrangement sets a piano lead over a warm pad, a bass line and a plucked arpeggio, driven by a kick–snare–hat kit whose intensity follows the market's volatility — silent in the intro, light in the verses, full in the chorus. The finished score holds ${score.notes.length} notes across ${pitched.length} pitched voices plus drums.`);
   return paras;
 }
 
-// ---------- MIDI file writer (Standard MIDI File, type 1) ----------
+// ---------- MIDI file writer (Standard MIDI File, type 1, multi-track) ----------
 function writeMidi(score){
   const PPQ=480;
+  const DRUM_PITCH={kick:36,snare:38,hat:42};
+  const TRACKS=[
+    {voices:["melody"],ch:0,prog:0},   // acoustic grand
+    {voices:["pad"],ch:1,prog:89},     // warm pad
+    {voices:["bass"],ch:2,prog:33},    // fingered bass
+    {voices:["arp"],ch:3,prog:46},     // harp
+    {voices:["kick","snare","hat"],ch:9}, // GM drums
+  ];
   const vlq=n=>{let b=[n&0x7f];n>>=7;while(n>0){b.unshift((n&0x7f)|0x80);n>>=7;}return b;};
-  function track(notes){
+  function track(notes,ch,prog){
     const evs=[];
     notes.forEach(n=>{
+      const pitch=DRUM_PITCH[n.voice]!==undefined?DRUM_PITCH[n.voice]:n.pitch;
       const s=Math.round(n.start*PPQ), e=Math.round((n.start+n.duration)*PPQ);
-      evs.push({t:s,on:true,p:n.pitch,v:n.velocity});
-      evs.push({t:e,on:false,p:n.pitch,v:0});
+      evs.push({t:s,on:true,p:pitch,v:n.velocity});
+      evs.push({t:e,on:false,p:pitch,v:0});
     });
     evs.sort((a,b)=>a.t-b.t||(a.on?1:0)-(b.on?1:0));
     let bytes=[], last=0;
+    if(prog!==undefined)bytes.push(0,0xC0|ch,prog&0x7f);
     evs.forEach(ev=>{
       const dt=ev.t-last; last=ev.t;
       bytes=bytes.concat(vlq(dt));
-      bytes.push(ev.on?0x90:0x80, ev.p&0x7f, ev.v&0x7f);
+      bytes.push((ev.on?0x90:0x80)|ch, ev.p&0x7f, ev.v&0x7f);
     });
     bytes=bytes.concat([0,0xFF,0x2F,0]); // end of track
     return bytes;
   }
   function chunk(id,data){const len=data.length;return [...id].map(c=>c.charCodeAt(0)).concat([(len>>24)&255,(len>>16)&255,(len>>8)&255,len&255],data);}
-  // tempo meta
   const usPerBeat=Math.round(60000000/score.tempo);
-  const tempoTrk=chunk("MTrk",[0,0xFF,0x51,3,(usPerBeat>>16)&255,(usPerBeat>>8)&255,usPerBeat&255,0,0xFF,0x2F,0]);
-  const voices={melody:[],harmony:[],bass:[]};
-  score.notes.forEach(n=>voices[n.voice].push(n));
-  const header=chunk("MThd",[0,1,0,4,(PPQ>>8)&255,PPQ&255]);
-  let all=header.concat(tempoTrk);
-  ["melody","harmony","bass"].forEach(v=>{all=all.concat(chunk("MTrk",track(voices[v])));});
+  const trks=[chunk("MTrk",[0,0xFF,0x51,3,(usPerBeat>>16)&255,(usPerBeat>>8)&255,usPerBeat&255,0,0xFF,0x2F,0])];
+  TRACKS.forEach(tr=>{
+    const ns=score.notes.filter(n=>tr.voices.includes(n.voice));
+    if(ns.length)trks.push(chunk("MTrk",track(ns,tr.ch,tr.prog)));
+  });
+  const n=trks.length;
+  const header=chunk("MThd",[0,1,(n>>8)&255,n&255,(PPQ>>8)&255,PPQ&255]);
+  let all=header; trks.forEach(tk=>{all=all.concat(tk);});
   return new Uint8Array(all);
 }
 
+if(typeof module!=="undefined"&&module.exports){module.exports={syntheticSeries,extractFeatures,composer,analyze,writeMidi,std,FORM};}
+/*ENGINE-END*/
+</script>
+
+<script>
 /* ===================== live data (backend → Yahoo Finance) ===================== */
 // Served by the FastAPI backend: same origin in production, :8000 when this
 // file is opened directly from disk (python backend/main.py).
@@ -367,28 +503,75 @@ async function fetchSeries(sym, start, end){
 /* ===================== UI wiring ===================== */
 const $=id=>document.getElementById(id);
 const PRESETS=["AAPL","TSLA","SPY","NVDA","BTC-USD","MSFT"];
-let current=null, playing=false, playHandle=null, rollProgress=0, rafId=null, playStart=0, playDur=0;
+let current=null, playing=false, rollProgress=0, rafId=null, playStart=0, playDur=0;
 
 // presets
 PRESETS.forEach(p=>{const b=document.createElement("button");b.className="chip";b.textContent=p;b.onclick=()=>{$("symbol").value=p;syncChips();};$("presets").appendChild(b);});
 function syncChips(){[...$("presets").children].forEach(c=>c.classList.toggle("on",c.textContent===$("symbol").value.toUpperCase()));}
 $("symbol").addEventListener("input",syncChips); syncChips();
 
-// canvas drawing
-function dpiCanvas(cv,h){const w=cv.clientWidth||600;const r=window.devicePixelRatio||1;cv.width=w*r;cv.height=h*r;const ctx=cv.getContext("2d");ctx.setTransform(r,0,0,r,0,0);return {ctx,w,h};}
-function lineChart(cv,data,color,fill){const {ctx,w,h}=dpiCanvas(cv,cv.getAttribute("height")*1);ctx.clearRect(0,0,w,h);const lo=Math.min(...data),hi=Math.max(...data),rng=hi-lo||1;const X=i=>i/(data.length-1)*(w-6)+3,Y=v=>h-4-((v-lo)/rng)*(h-8);ctx.beginPath();data.forEach((v,i)=>{const x=X(i),y=Y(v);i?ctx.lineTo(x,y):ctx.moveTo(x,y);});ctx.strokeStyle=color;ctx.lineWidth=2;ctx.stroke();ctx.lineTo(X(data.length-1),h);ctx.lineTo(X(0),h);ctx.closePath();ctx.fillStyle=fill;ctx.fill();}
-function barChart(cv,data,color){const {ctx,w,h}=dpiCanvas(cv,cv.getAttribute("height")*1);ctx.clearRect(0,0,w,h);const hi=Math.max(...data)||1;const bw=w/data.length;ctx.fillStyle=color;data.forEach((v,i)=>{const bh=(v/hi)*(h-6);ctx.fillRect(i*bw,h-bh,Math.max(1,bw-0.5),bh);});}
+/* ---------- interactive charts (Plotly: hover values, drag/scroll zoom) ---------- */
+function chartLayout(h){
+  const ax={gridcolor:"rgba(255,255,255,.06)",zeroline:false,linecolor:"rgba(255,255,255,.12)",tickfont:{size:10}};
+  return {height:h,margin:{l:48,r:6,t:6,b:26},paper_bgcolor:"rgba(0,0,0,0)",plot_bgcolor:"rgba(0,0,0,0)",
+    font:{family:"Inter, sans-serif",size:11,color:"#a7adc4"},xaxis:{...ax},yaxis:{...ax},showlegend:false,
+    hovermode:"x unified",dragmode:"zoom",
+    hoverlabel:{bgcolor:"#1e2236",bordercolor:"rgba(217,178,106,.5)",font:{color:"#e8eaf2",size:11,family:"Inter, sans-serif"}}};
+}
+const CHART_CFG={displayModeBar:false,responsive:true,scrollZoom:true};
+function renderCharts(series){
+  const rets=series.close.map((c,i)=>i?(c-series.close[i-1])/series.close[i-1]:0);
+  const roll=[];for(let i=0;i<rets.length;i++){const seg=rets.slice(Math.max(0,i-9),i+1);roll.push(std(seg)*100);}
+  Plotly.react("priceCh",[{x:series.dates,y:series.close,type:"scatter",mode:"lines",
+    line:{color:"#d9b26a",width:2},hovertemplate:"<b>%{y:,.2f}</b><extra>close</extra>"}],chartLayout(180),CHART_CFG);
+  Plotly.react("volCh",[{x:series.dates,y:roll,type:"scatter",mode:"lines",
+    line:{color:"#c97b84",width:1.5},fill:"tozeroy",fillcolor:"rgba(201,123,132,.08)",
+    hovertemplate:"<b>%{y:.2f}%</b><extra>volatility</extra>"}],chartLayout(120),CHART_CFG);
+  Plotly.react("volumeCh",[{x:series.dates,y:series.volume,type:"bar",
+    marker:{color:"rgba(122,162,209,.55)"},hovertemplate:"<b>%{y:.3s}</b><extra>volume</extra>"}],chartLayout(120),CHART_CFG);
+}
 
-const VOICE_COLOR={melody:"#d9b26a",harmony:"#7aa2d1",bass:"#c97b84"};
+/* ---------- piano roll with song sections + drum lane ---------- */
+function dpiCanvas(cv,h){const w=cv.clientWidth||600;const r=window.devicePixelRatio||1;cv.width=w*r;cv.height=h*r;const ctx=cv.getContext("2d");ctx.setTransform(r,0,0,r,0,0);return {ctx,w,h};}
+const VOICE_COLOR={melody:"#d9b26a",pad:"#7aa2d1",bass:"#c97b84",arp:"#8fd1a0"};
+const DRUM_ROW={hat:0,snare:1,kick:2};
+const DRUM_COLOR={kick:"#8a8fa8",snare:"#a7adc4",hat:"#565b73"};
 function drawRoll(){
-  const cv=$("rollCv"); const {ctx,w,h}=dpiCanvas(cv,220);
+  const cv=$("rollCv"); const {ctx,w,h}=dpiCanvas(cv,250);
   ctx.clearRect(0,0,w,h);
   if(!current)return;
-  const notes=current.score.notes;
-  const pitches=notes.map(n=>n.pitch); const lo=Math.min(...pitches),hi=Math.max(...pitches),range=Math.max(1,hi-lo);
-  const end=Math.max(...notes.map(n=>n.start+n.duration),1); const rowH=h/(range+2);
-  notes.forEach(n=>{const x=n.start/end*w,ww=Math.max(1.5,n.duration/end*w),y=h-(n.pitch-lo+1)*rowH;
-    ctx.fillStyle=VOICE_COLOR[n.voice];ctx.globalAlpha=0.35+n.velocity/127*0.6;ctx.fillRect(x,y,ww,Math.max(2,rowH-1));});
+  const {notes,sections,totalBeats}=current.score;
+  const end=totalBeats||Math.max(...notes.map(n=>n.start+n.duration),1);
+  const LBL=16, DRUMS_H=30, top=LBL, ph=h-LBL-DRUMS_H;
+  // section bands + labels
+  ctx.font="9px Inter, sans-serif";
+  sections.forEach((s,i)=>{
+    const x0=s.start/end*w, x1=s.end/end*w;
+    if(i%2){ctx.fillStyle="rgba(255,255,255,.025)";ctx.fillRect(x0,0,x1-x0,h);}
+    ctx.strokeStyle="rgba(255,255,255,.08)";ctx.beginPath();ctx.moveTo(x0,0);ctx.lineTo(x0,h);ctx.stroke();
+    ctx.fillStyle="rgba(217,178,106,.75)";ctx.fillText(s.name.toUpperCase(),x0+4,11);
+  });
+  // pitched notes
+  const pitchedNotes=notes.filter(n=>VOICE_COLOR[n.voice]);
+  if(pitchedNotes.length){
+    const pitches=pitchedNotes.map(n=>n.pitch);
+    const lo=Math.min(...pitches),hi=Math.max(...pitches),range=Math.max(1,hi-lo);
+    const rowH=ph/(range+2);
+    pitchedNotes.forEach(n=>{
+      const x=n.start/end*w, ww=Math.max(1.5,n.duration/end*w), y=top+ph-(n.pitch-lo+1)*rowH;
+      ctx.fillStyle=VOICE_COLOR[n.voice];ctx.globalAlpha=0.35+n.velocity/127*0.6;
+      ctx.fillRect(x,y,ww,Math.max(2,rowH-1));
+    });
+  }
+  // drum lane
+  ctx.globalAlpha=1;ctx.strokeStyle="rgba(255,255,255,.07)";
+  ctx.beginPath();ctx.moveTo(0,h-DRUMS_H);ctx.lineTo(w,h-DRUMS_H);ctx.stroke();
+  notes.filter(n=>DRUM_ROW[n.voice]!==undefined).forEach(n=>{
+    const x=n.start/end*w, y=h-DRUMS_H+3+DRUM_ROW[n.voice]*9;
+    ctx.fillStyle=DRUM_COLOR[n.voice];ctx.globalAlpha=0.35+n.velocity/127*0.6;
+    ctx.fillRect(x,y,2.5,7);
+  });
+  // playhead
   ctx.globalAlpha=1;ctx.fillStyle="rgba(255,255,255,.75)";ctx.fillRect(rollProgress*w,0,2,h);
 }
 
@@ -402,16 +585,11 @@ function render(){
   else if(series.source==="synthetic"){ srcTag.textContent="backend synthetic fallback"; srcTag.style.color=""; srcTag.style.borderColor=""; }
   else { srcTag.textContent="offline synthetic (backend unreachable)"; srcTag.style.color=""; srcTag.style.borderColor=""; }
   $("portraitTitle").textContent=`${series.symbol} — Market Portrait`;
-  lineChart($("priceCv"),series.close,"#d9b26a","rgba(217,178,106,.08)");
-  lineChart($("volCv"),feat.phrases.length?series.close.map((_,i)=>0):[],"#c97b84","rgba(201,123,132,.08)"); // placeholder replaced below
-  // volatility rolling
-  const roll=[];const rets=series.close.map((c,i)=>i?(c-series.close[i-1])/series.close[i-1]:0);
-  for(let i=0;i<rets.length;i++){const seg=rets.slice(Math.max(0,i-9),i+1);roll.push(std(seg));}
-  lineChart($("volCv"),roll,"#c97b84","rgba(201,123,132,.08)");
-  barChart($("volumeCv"),series.volume,"rgba(122,162,209,.5)");
+  renderCharts(series);
 
-  $("sonataTitle").textContent=`${series.symbol} Sonata`;
-  $("sonataMeta").textContent=`${score.keyName} ${score.mode} · ${Math.round(score.tempo)} BPM · ${score.notes.length} notes`;
+  $("sonataTitle").textContent=`${series.symbol} — a market song`;
+  $("sonataMeta").textContent=`${score.keyName} ${score.mode} · ${Math.round(score.tempo)} BPM · ${Math.round(score.totalBeats/4)} bars · ${score.notes.length} notes`;
+  $("secNow").textContent="";
   drawRoll();
 
   // analyst
@@ -419,12 +597,12 @@ function render(){
   const stats=[["Trend",feat.trend>0.4?"major":feat.trend>0.05?"major (tentative)":feat.trend>-0.05?"modal / ambiguous":feat.trend>-0.4?"minor":"minor (dark)"],
     ["Total return",(feat.totalReturn*100).toFixed(1)+"%"],["Avg. volatility",Math.round(feat.avgVol*100)+"%"],
     ["Avg. volume",Math.round(feat.avgVolume*100)+"%"],["Max drawdown","−"+(feat.maxDrawdown*100).toFixed(1)+"%"],
-    ["Phrases",String(feat.phrases.length)]];
+    ["Form","Intro–Verse–Chorus"]];
   $("statsBox").innerHTML=stats.map(([k,v])=>`<div class="stat"><div class="k">${k}</div><div class="v">${v}</div></div>`).join("");
 
   // MIDI download
   const bytes=writeMidi(score); const blob=new Blob([bytes],{type:"audio/midi"});
-  const url=URL.createObjectURL(blob); const a=$("dlBtn"); a.href=url; a.download=`${series.symbol}_sonata.mid`;
+  const url=URL.createObjectURL(blob); const a=$("dlBtn"); a.href=url; a.download=`${series.symbol}_song.mid`;
 }
 
 // Build features + score + view from a series and store it as `current`.
@@ -483,33 +661,79 @@ function startLive(){ stopLive(); setLiveDot("on"); refreshTick(); liveTimer=set
 function stopLive(){ if(liveTimer){clearInterval(liveTimer);liveTimer=null;} setLiveDot("off"); }
 $("liveToggle").addEventListener("change",e=>{ e.target.checked?startLive():stopLive(); });
 
-// ---------- playback via Tone.js ----------
-let synth=null;
-function getSynth(){if(!synth){const rev=new Tone.Reverb({decay:3.2,wet:0.25}).toDestination();synth=new Tone.PolySynth(Tone.Synth,{oscillator:{type:"triangle"},envelope:{attack:0.02,decay:0.4,sustain:0.25,release:1.6}}).connect(rev);synth.volume.value=-8;}return synth;}
-const VGAIN={melody:0,harmony:-6,bass:-3};
+/* ---------- playback via Tone.js: full band ---------- */
+let band=null;
+function getBand(){
+  if(band) return band;
+  const rev=new Tone.Reverb({decay:3.5,wet:0.3}).toDestination();
+  const lead=new Tone.PolySynth(Tone.Synth,{oscillator:{type:"triangle"},envelope:{attack:0.02,decay:0.4,sustain:0.25,release:1.6}}).connect(rev);
+  lead.volume.value=-7;
+  const padFilter=new Tone.Filter(1100,"lowpass").connect(rev);
+  const pad=new Tone.PolySynth(Tone.Synth,{oscillator:{type:"sawtooth"},envelope:{attack:0.6,decay:0.5,sustain:0.6,release:2.2}}).connect(padFilter);
+  pad.volume.value=-16;
+  const bass=new Tone.MonoSynth({oscillator:{type:"triangle"},envelope:{attack:0.01,decay:0.3,sustain:0.5,release:0.4},
+    filterEnvelope:{attack:0.01,decay:0.2,sustain:0.4,release:0.3,baseFrequency:120,octaves:2.5}}).toDestination();
+  bass.volume.value=-6;
+  const arp=new Tone.PolySynth(Tone.Synth,{oscillator:{type:"sine"},envelope:{attack:0.005,decay:0.18,sustain:0.05,release:0.4}}).connect(rev);
+  arp.volume.value=-14;
+  const kick=new Tone.MembraneSynth({pitchDecay:0.04,octaves:6,envelope:{attack:0.001,decay:0.35,sustain:0}}).toDestination();
+  kick.volume.value=-4;
+  const snare=new Tone.NoiseSynth({noise:{type:"white"},envelope:{attack:0.001,decay:0.16,sustain:0}}).connect(new Tone.Filter(1800,"highpass").toDestination());
+  snare.volume.value=-12;
+  const hat=new Tone.NoiseSynth({noise:{type:"white"},envelope:{attack:0.001,decay:0.045,sustain:0}}).connect(new Tone.Filter(8000,"highpass").toDestination());
+  hat.volume.value=-20;
+  band={lead,pad,bass,arp,kick,snare,hat};
+  return band;
+}
 async function playScore(){
-  await Tone.start(); const s=getSynth();
+  await Tone.start(); const B=getBand();
   Tone.Transport.stop();Tone.Transport.cancel();
   const score=current.score; Tone.Transport.bpm.value=score.tempo;
-  const spb=60/score.tempo; let endBeat=0;
+  const spb=60/score.tempo;
   score.notes.forEach(n=>{
     const startS=n.start*spb, durS=Math.max(0.05,n.duration*spb);
-    const freq=Tone.Frequency(n.pitch,"midi").toFrequency();
-    const v=Math.max(0.05,Math.min(1,n.velocity/127))*Math.pow(10,(VGAIN[n.voice]||0)/20);
-    Tone.Transport.schedule(t=>s.triggerAttackRelease(freq,durS,t,v),startS);
-    endBeat=Math.max(endBeat,n.start+n.duration);
+    const v=Math.max(0.05,Math.min(1,n.velocity/127));
+    let fn;
+    switch(n.voice){
+      case "melody": {const f=Tone.Frequency(n.pitch,"midi").toFrequency(); fn=t=>B.lead.triggerAttackRelease(f,durS,t,v); break;}
+      case "pad":    {const f=Tone.Frequency(n.pitch,"midi").toFrequency(); fn=t=>B.pad.triggerAttackRelease(f,durS,t,v); break;}
+      case "bass":   {const f=Tone.Frequency(n.pitch,"midi").toFrequency(); fn=t=>B.bass.triggerAttackRelease(f,durS,t,v); break;}
+      case "arp":    {const f=Tone.Frequency(n.pitch,"midi").toFrequency(); fn=t=>B.arp.triggerAttackRelease(f,durS,t,v); break;}
+      case "kick":   fn=t=>B.kick.triggerAttackRelease("C1",0.2,t,v); break;
+      case "snare":  fn=t=>B.snare.triggerAttackRelease(0.12,t,v); break;
+      case "hat":    fn=t=>B.hat.triggerAttackRelease(0.03,t,v); break;
+      default: return;
+    }
+    Tone.Transport.schedule(fn,startS);
   });
-  playDur=endBeat*spb+0.5; playStart=performance.now();
+  playDur=score.totalBeats*spb+1;
+  playStart=performance.now();
   Tone.Transport.schedule(()=>{Tone.Draw.schedule(()=>stopPlayback(),0);},playDur);
   Tone.Transport.start();
   playing=true; $("playBtn").textContent="◼ Stop";
-  const tick=()=>{if(!playing)return;rollProgress=Math.min(1,(performance.now()-playStart)/1000/playDur);drawRoll();rafId=requestAnimationFrame(tick);};
+  const tick=()=>{
+    if(!playing)return;
+    rollProgress=Math.min(1,(performance.now()-playStart)/1000/playDur);
+    const beat=rollProgress*current.score.totalBeats;
+    const sec=current.score.sections.find(s=>beat>=s.start&&beat<s.end);
+    $("secNow").textContent=sec?("· "+sec.name+" ·"):"";
+    drawRoll();
+    rafId=requestAnimationFrame(tick);
+  };
   tick();
 }
-function stopPlayback(){playing=false;$("playBtn").textContent="▶ Play";try{Tone.Transport.stop();Tone.Transport.cancel();synth&&synth.releaseAll();}catch(e){}if(rafId)cancelAnimationFrame(rafId);rollProgress=0;drawRoll();}
+function stopPlayback(){
+  playing=false;$("playBtn").textContent="▶ Play";
+  try{Tone.Transport.stop();Tone.Transport.cancel();
+    if(band){band.lead.releaseAll();band.pad.releaseAll();band.arp.releaseAll();}
+  }catch(e){}
+  if(rafId)cancelAnimationFrame(rafId);
+  rollProgress=0;if(current)drawRoll();
+  const el=document.getElementById("secNow"); if(el)el.textContent="";
+}
 $("playBtn").onclick=()=>{playing?stopPlayback():playScore();};
 
-window.addEventListener("resize",()=>{if(current)render();});
+window.addEventListener("resize",()=>{if(current)drawRoll();});
 
 // Default the date range to the last ~6 months so live refresh has a moving edge.
 (function initDates(){
