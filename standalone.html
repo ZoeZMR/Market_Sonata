@@ -8,7 +8,7 @@
 <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,400;0,600;1,400&family=Inter:wght@300;400;500;600&display=swap" rel="stylesheet" />
 <!-- Tone.js for in-browser playback, Plotly for interactive charts -->
 <script src="https://cdnjs.cloudflare.com/ajax/libs/tone/15.0.4/Tone.js"></script>
-<script src="https://cdnjs.cloudflare.com/ajax/libs/plotly.js/2.35.2/plotly-basic.min.js"></script>
+<script src="https://cdn.plot.ly/plotly-basic-2.35.2.min.js"></script>
 <style>
   :root { color-scheme: dark; }
   * { box-sizing: border-box; }
@@ -520,6 +520,10 @@ function chartLayout(h){
 }
 const CHART_CFG={displayModeBar:false,responsive:true,scrollZoom:true};
 function renderCharts(series){
+  if(typeof Plotly==="undefined"){ // CDN blocked/offline: charts are optional, the music still works
+    ["priceCh","volCh","volumeCh"].forEach(id=>{$(id).innerHTML='<p class="badge">chart library unavailable</p>';});
+    return;
+  }
   const rets=series.close.map((c,i)=>i?(c-series.close[i-1])/series.close[i-1]:0);
   const roll=[];for(let i=0;i<rets.length;i++){const seg=rets.slice(Math.max(0,i-9),i+1);roll.push(std(seg)*100);}
   Plotly.react("priceCh",[{x:series.dates,y:series.close,type:"scatter",mode:"lines",
@@ -626,11 +630,17 @@ async function getSeries(sym){
 async function doCompose(){
   const sym=$("symbol").value.trim().toUpperCase()||"AAPL";
   $("composeBtn").disabled=true; $("composeBtn").textContent="Composing…";
-  const series=await getSeries(sym);
-  composeFrom(series);
-  stopPlayback();
-  render();
-  $("composeBtn").disabled=false; $("composeBtn").textContent="Compose Sonata";
+  try{
+    const series=await getSeries(sym);
+    composeFrom(series);
+    stopPlayback();
+    render();
+  }catch(e){
+    console.error(e);
+    $("liveStatus").textContent="Something went wrong while composing: "+e.message;
+  }finally{
+    $("composeBtn").disabled=false; $("composeBtn").textContent="Compose Sonata";
+  }
 }
 $("composeBtn").onclick=doCompose;
 
