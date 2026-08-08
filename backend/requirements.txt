@@ -11,6 +11,7 @@ yfinance==0.2.44
 # Music generation
 pretty_midi==0.2.10
 numpy==1.26.4
+setuptools>=70  # pretty_midi imports pkg_resources, absent from py3.12 venvs
 
 # Optional: enables the LLM-polished analyst (set ANTHROPIC_API_KEY)
 anthropic==0.39.0
