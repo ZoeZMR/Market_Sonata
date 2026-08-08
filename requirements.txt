@@ -1,0 +1,3 @@
+# Root-level requirements so hosting platforms (Render, etc.) that run
+# `pip install -r requirements.txt` from the repo root pick up the backend deps.
+-r backend/requirements.txt
