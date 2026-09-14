@@ -92,12 +92,14 @@
   input:focus { outline:none; border-color: var(--gold); }
   input[type=checkbox], input[type=range] { width:auto; background:none; border:none; padding:0; accent-color: var(--gold); }
   input[type=range] { width:110px; cursor:pointer; }
-  .presets { display:flex; flex-wrap:wrap; gap:6px; margin-top:10px; }
+  .presets { display:flex; flex-direction:column; gap:8px; margin-top:10px; }
+  .preset-group { display:flex; align-items:baseline; gap:8px; flex-wrap:wrap; }
+  .chip-label { font-size:10px; color:var(--mist); opacity:.55; text-transform:uppercase;
+                letter-spacing:.06em; flex:0 0 52px; }
+  .chip-row { display:flex; flex-wrap:wrap; gap:6px; flex:1 1 auto; min-width:0; }
   .chip { font-size:11px; padding:5px 11px; border-radius:999px; border:1px solid var(--line-2);
           color:var(--mist); cursor:pointer; background:none; font-family:inherit; }
   .chip.on { background:var(--gold); color:var(--on-gold); border-color:var(--gold); }
-  .chip-label { font-size:10px; padding:5px 2px; color:var(--mist); opacity:.55;
-                text-transform:uppercase; letter-spacing:.06em; align-self:center; }
   .row2 { display:grid; grid-template-columns:1fr 1fr; gap:10px; }
   button.primary {
     width:100%; margin-top:18px; padding:13px; border:none; border-radius:12px;
@@ -167,6 +169,7 @@
     <h1 class="display gold">Market <span style="font-style:italic">Sonata</span></h1>
     <div class="hdr-right">
       <span class="sub mist">financial markets → musical narratives</span>
+      <span class="tag" id="pointsTag" title="Predict the next chapter to earn points — see below" style="border-color:var(--gold);color:var(--gold-ink)">🎯 0 pts</span>
       <div class="seg" id="themeSeg" role="group" aria-label="Colour theme">
         <button type="button" data-theme-choice="auto"  title="Follow the system setting">Auto</button>
         <button type="button" data-theme-choice="light" title="Light theme">Light</button>
@@ -265,6 +268,14 @@
         </div>
         <div class="note" id="noteBody"></div>
         <div class="stats" id="statsBox"></div>
+      </div>
+
+      <div class="card" id="predictCard" style="display:none">
+        <div style="display:flex;justify-content:space-between;align-items:center">
+          <h2 class="display gold">Predict the Next Chapter</h2>
+          <span class="tag" id="predictTag">—</span>
+        </div>
+        <div id="predictBody"></div>
       </div>
     </div>
   </div>
@@ -833,11 +844,14 @@ let midiUrl=null;   // revoked and reissued on every compose
 
 // presets
 PRESET_GROUPS.forEach(g=>{
+  const wrap=document.createElement("div"); wrap.className="preset-group";
   const lab=document.createElement("span"); lab.className="chip-label"; lab.textContent=g.label;
-  $("presets").appendChild(lab);
-  g.symbols.forEach(p=>{const b=document.createElement("button");b.className="chip";b.textContent=p;b.onclick=()=>{$("symbol").value=p;syncChips();};$("presets").appendChild(b);});
+  const row=document.createElement("span"); row.className="chip-row";
+  g.symbols.forEach(p=>{const b=document.createElement("button");b.className="chip";b.textContent=p;b.onclick=()=>{$("symbol").value=p;syncChips();};row.appendChild(b);});
+  wrap.append(lab,row);
+  $("presets").appendChild(wrap);
 });
-function syncChips(){[...$("presets").children].forEach(c=>{if(c.classList.contains("chip"))c.classList.toggle("on",c.textContent===$("symbol").value.toUpperCase());});}
+function syncChips(){[...$("presets").querySelectorAll(".chip")].forEach(c=>c.classList.toggle("on",c.textContent===$("symbol").value.toUpperCase()));}
 $("symbol").addEventListener("input",syncChips); syncChips();
 
 /* ---------- theme: auto / light / dark ----------
@@ -1038,9 +1052,170 @@ $("rollCv").addEventListener("pointermove",e=>{
 $("rollCv").addEventListener("pointerup",endDrag);
 $("rollCv").addEventListener("pointercancel",endDrag);
 
+/* ===================== prediction game ===================== */
+// A lightweight, local-only game layered on top of the real engine: before
+// hearing what comes next, guess the shape of the SAME symbol's next ~5
+// trading days, then compare against what actually happens once that window
+// exists in the data. It never changes what the music itself does — it only
+// grades a guess against it. All state (points, pending/resolved guesses)
+// lives in this browser's localStorage; there are no accounts or a server.
+const POINTS_KEY = "ms-points";
+const PREDICTIONS_KEY = "ms-predictions";
+
+const PREDICT_CATS = [
+  {key:"direction",  label:"Direction",  points:20, options:[["down","Down"],["sideways","Sideways"],["up","Up"]]},
+  {key:"mode",       label:"Mode",       points:20, options:[["minor","Minor"],["ambiguous","Ambiguous"],["major","Major"]]},
+  {key:"volatility", label:"Volatility", points:20, options:[["low","Low"],["medium","Medium"],["high","High"]]},
+  {key:"dynamics",   label:"Dynamics",   points:20, options:[["quiet","Quiet"],["moderate","Moderate"],["full","Full"]]},
+];
+const PERFECT_BONUS = 20;   // all four correct in one round → 100 total
+
+// Bucket thresholds mirror the ones the engine itself already uses (see
+// extractFeatures/composer/analyze above), so "correct" always means the
+// guess matches what the music actually does — never an invented distinction.
+// Deliberately absent: the tonic (e.g. "C#"), which is fixed by the ticker's
+// fingerprint alone and never changes between windows, so it's not a
+// prediction about the market — see "Why two tickers don't sound the same".
+function bucketDirection(trend){ return trend>0.05?"up":trend<-0.05?"down":"sideways"; }
+function bucketMode(trend){ return trend>0.15?"major":trend<-0.15?"minor":"ambiguous"; }
+function bucketVolatility(v){ return v<0.34?"low":v<0.67?"medium":"high"; }
+function bucketDynamics(v){ return v<0.34?"quiet":v>0.66?"full":"moderate"; }
+function actualBuckets(feat){
+  return {direction:bucketDirection(feat.trend), mode:bucketMode(feat.trend),
+          volatility:bucketVolatility(feat.avgVol), dynamics:bucketDynamics(feat.avgVolume)};
+}
+function labelFor(cat,val){ const hit=cat.options.find(([v])=>v===val); return hit?hit[1]:val; }
+
+function loadJSON(key,fallback){ try{ const v=JSON.parse(localStorage.getItem(key)); return v==null?fallback:v; }catch(e){ return fallback; } }
+function saveJSON(key,val){ try{ localStorage.setItem(key,JSON.stringify(val)); }catch(e){} }
+function getPoints(){ return Number(loadJSON(POINTS_KEY,0))||0; }
+function addPoints(n){ const p=getPoints()+n; saveJSON(POINTS_KEY,p); updatePointsTag(); return p; }
+function updatePointsTag(){ $("pointsTag").textContent=`🎯 ${getPoints().toLocaleString()} pts`; }
+
+function addDaysISO(iso,n){ const d=new Date(iso+"T00:00:00Z"); d.setUTCDate(d.getUTCDate()+n); return d.toISOString().slice(0,10); }
+function nextWindow(lastDateISO){ return {start:addDaysISO(lastDateISO,1), end:addDaysISO(lastDateISO,9)}; }
+function predictionKey(series){ return `${series.symbol}|${series.dates[series.dates.length-1]}`; }
+function currentPrediction(){ if(!current)return null; return loadJSON(PREDICTIONS_KEY,{})[predictionKey(current.series)]||null; }
+function savePrediction(entry){
+  const preds=loadJSON(PREDICTIONS_KEY,{});
+  preds[predictionKey(current.series)]=entry;
+  saveJSON(PREDICTIONS_KEY,preds);
+}
+
+function segGroupHTML(cat,selected){
+  return `<div style="margin-top:10px">
+    <label style="margin:0 0 4px">${cat.label} <span class="mist" style="text-transform:none;letter-spacing:0">· ${cat.points} pts</span></label>
+    <div class="seg" data-cat="${cat.key}">
+      ${cat.options.map(([v,l])=>`<button type="button" data-val="${v}" class="${v===selected?"on":""}">${l}</button>`).join("")}
+    </div>
+  </div>`;
+}
+
+function renderPredictForm(guess){
+  const body=$("predictBody");
+  body.innerHTML=`
+    <p class="mist" style="font-size:13px;font-weight:300;margin:0">
+      Before you hear it: guess what <b>${current.series.symbol}</b>'s next ~5 trading
+      days will sound like. Points come from whichever categories you get right —
+      no need to nail all four.
+    </p>
+    ${PREDICT_CATS.map(c=>segGroupHTML(c,guess[c.key])).join("")}
+    <button class="primary" id="lockPredictBtn" type="button">Lock In Prediction</button>
+  `;
+  body.querySelectorAll(".seg").forEach(seg=>{
+    seg.addEventListener("click",e=>{
+      const btn=e.target.closest("button[data-val]"); if(!btn)return;
+      guess[seg.dataset.cat]=btn.dataset.val;
+      [...seg.children].forEach(c=>c.classList.toggle("on",c===btn));
+    });
+  });
+  $("lockPredictBtn").onclick=()=>{
+    savePrediction({guess:{...guess}, lockedAt:new Date().toISOString(), resolved:false});
+    renderPredictCard();
+  };
+}
+
+function renderPredictResolved(entry){
+  const body=$("predictBody");
+  const rows=PREDICT_CATS.map(c=>{
+    const hit=entry.guess[c.key]===entry.actual[c.key];
+    return `<div class="stat"><div class="k">${c.label}</div>
+      <div class="v" style="color:${hit?"var(--good)":"inherit"}">
+        ${hit?"✓":"✗"} guessed ${labelFor(c,entry.guess[c.key])} · actual ${labelFor(c,entry.actual[c.key])}
+      </div></div>`;
+  }).join("");
+  body.innerHTML=`
+    <p class="mist" style="font-size:13px;font-weight:300;margin:0 0 10px">
+      The next chapter (${entry.windowStart} → ${entry.windowEnd}) is in. You scored
+      <span class="gold" style="font-weight:600">${entry.earned} pts</span>${entry.perfect?" — a perfect round! 🎉":""}.
+    </p>
+    <div class="stats" style="grid-template-columns:1fr">${rows}</div>
+    <button class="btn-ghost" id="hearNextBtn" type="button" style="margin-top:14px">▶ Compose this chapter</button>
+  `;
+  $("hearNextBtn").onclick=()=>{
+    $("symbol").value=current.series.symbol;
+    $("start").value=entry.windowStart;
+    $("end").value=entry.windowEnd;
+    doCompose();
+  };
+}
+
+async function renderPredictCard(){
+  if(!current)return;
+  $("predictCard").style.display="block";
+  const entry=currentPrediction();
+
+  if(!entry){
+    $("predictTag").textContent="make your guess";
+    renderPredictForm({direction:"sideways",mode:"ambiguous",volatility:"medium",dynamics:"moderate"});
+    return;
+  }
+  if(entry.resolved){
+    $("predictTag").textContent="resolved";
+    renderPredictResolved(entry);
+    return;
+  }
+
+  // Locked but not yet resolved — try to resolve it now. Since this reads
+  // historical data, if the window already happened the reveal is instant;
+  // otherwise it stays pending until the user comes back later.
+  $("predictTag").textContent="checking…";
+  $("predictBody").innerHTML=`<p class="mist" style="font-size:13px;font-weight:300">
+    Prediction locked. Checking whether ${current.series.symbol}'s next chapter has happened yet…
+  </p>`;
+  const {start,end}=nextWindow(current.series.dates[current.series.dates.length-1]);
+  const myToken=renderToken;
+  try{
+    const series=await fetchSeries(current.series.symbol,start,end);
+    if(myToken!==renderToken)return;   // a newer piece has since been composed
+    if(!series.close||series.close.length<2)throw new Error("not enough data yet");
+    const feat=extractFeatures(series,4);
+    const actual=actualBuckets(feat);
+    let earned=0;
+    PREDICT_CATS.forEach(c=>{ if(entry.guess[c.key]===actual[c.key])earned+=c.points; });
+    const perfect=PREDICT_CATS.every(c=>entry.guess[c.key]===actual[c.key]);
+    if(perfect)earned+=PERFECT_BONUS;
+    const resolved={...entry, resolved:true, actual, earned, perfect,
+      windowStart:series.dates[0], windowEnd:series.dates[series.dates.length-1]};
+    savePrediction(resolved);
+    addPoints(earned);
+    $("predictTag").textContent="resolved";
+    renderPredictResolved(resolved);
+  }catch(e){
+    if(myToken!==renderToken)return;
+    $("predictTag").textContent="pending";
+    $("predictBody").innerHTML=`<p class="mist" style="font-size:13px;font-weight:300">
+      Locked in: ${PREDICT_CATS.map(c=>`${c.label.toLowerCase()} = ${labelFor(c,entry.guess[c.key])}`).join(" · ")}.
+      ${current.series.symbol}'s next chapter (starting ${start}) hasn't happened yet, or the
+      market hasn't been open long enough since then — recompose this same range later to check again.
+    </p>`;
+  }
+}
+updatePointsTag();
+
 function render(){
   $("emptyState").style.display="none";
-  ["chartsCard","playerCard","analystCard"].forEach(id=>$(id).style.display="block");
+  ["chartsCard","playerCard","analystCard","predictCard"].forEach(id=>$(id).style.display="block");
   const {series,feat,score}=current;
   // data-source badge in the Analyst's Note
   const srcTag=$("srcTag");
@@ -1082,6 +1257,9 @@ function render(){
   const bytes=writeMidi(score); const blob=new Blob([bytes],{type:"audio/midi"});
   midiUrl=URL.createObjectURL(blob);
   const a=$("dlBtn"); a.href=midiUrl; a.download=`${series.symbol}_song.mid`;
+
+  // prediction game — separate card, own async lifecycle (see renderPredictCard)
+  renderPredictCard();
 }
 
 // Build features + score + view from a series and store it as `current`.
