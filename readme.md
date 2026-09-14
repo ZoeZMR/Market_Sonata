@@ -44,8 +44,9 @@ produces the same piece, and the analyst can tell you *why* each choice was made
 
 ## ✦ Features
 
-- **Market selection** — pick a symbol (AAPL, TSLA, SPY, NVDA, BTC-USD…) and a
-  date range, or arrive on a **shareable permalink** that restores all of it.
+- **Market selection** — type any ticker the backend can resolve, or pick from
+  grouped quick chips (Tech, Indices, Crypto, and more) and a date range. Arrive
+  on a **shareable permalink** to restore a selection exactly.
 - **Market portrait** — interactive price, volatility and volume charts (Plotly),
   with hover values and drag/scroll zoom.
 - **Compose Sonata** — one click runs the full pipeline and returns a real
@@ -65,7 +66,9 @@ produces the same piece, and the analyst can tell you *why* each choice was made
   render of exactly what you are hearing, mixer settings included).
 - **The Analyst's Note** — a music analyst explains the composition, grounded in
   the actual score, including which decisions came from the market and which
-  came from the ticker.
+  came from the ticker. When `ANTHROPIC_API_KEY` is set, Claude polishes the
+  prose (tagged "Claude-polished" in the UI); otherwise a grounded rule-based
+  note renders instantly, with identical facts either way.
 - **Live mode** — optional 60-second auto-refresh that recomposes when the last
   close changes, and never interrupts playback mid-piece.
 
@@ -75,10 +78,7 @@ produces the same piece, and the analyst can tell you *why* each choice was made
 
 The obvious failure mode for a system like this is that **every symbol comes out
 sounding identical**, because most price charts have broadly the same statistics.
-Earlier versions had exactly that problem: on an identical market, eleven
-different tickers produced **one single rhythm** between them.
-
-Two things fixed it.
+Market Sonata avoids it with two mechanisms working together.
 
 **1 · The ticker is hashed into a musical fingerprint.** The symbol runs through
 FNV-1a (a char-code *sum* used to collide for anagrams like `AAPL`/`LAPA` and
@@ -105,15 +105,12 @@ equal-length notes. The fingerprint supplies a rhythmic *cell*; volatility then
 splits its longest notes or merges its shortest. The ticker sets the character,
 the market sets the density, and neither erases the other.
 
-Measured on an identical synthetic market across 11 tickers:
+Measured on an identical synthetic market across 11 tickers: **11 / 11** produce
+distinct melodies, **11 / 11** produce distinct rhythms, and between them they
+span all 3 mode families.
 
-| | distinct melodies | distinct rhythms | distinct modes |
-|---|---|---|---|
-| Before | 8 / 11 (same tune, transposed) | **1 / 11** | 1 |
-| After | **11 / 11** | **11 / 11** | 3 |
-
-Determinism is preserved: the same symbol and window always produce the same
-piece, note for note.
+Determinism holds throughout: the same symbol and window always produce the
+same piece, note for note.
 
 ---
 
@@ -146,32 +143,25 @@ piece, note for note.
 
 ---
 
-## ✦ Market data — and why the numbers now match Yahoo
+## ✦ Market data — and why the numbers match Yahoo
 
-`backend/market_data.py` had three separate defects that each made the displayed
-prices disagree with finance.yahoo.com. All three are fixed:
+`backend/market_data.py` resolves a request in order: **Yahoo's public chart
+endpoint → yfinance → deterministic synthetic walk.** The response carries
+`source`, `note` and `currency` so the UI can state exactly what it is showing;
+a synthetic fallback is always labelled as such, with the reason attached.
 
-1. **The pinned `yfinance==0.2.44` was dead.** Every call raised
-   `JSONDecodeError` against current Yahoo, and a bare `except Exception`
-   silently substituted the synthetic series — so the app was showing invented
-   prices while looking like it was live. The **primary path is now Yahoo's
-   public chart endpoint called with nothing but the standard library**, which
-   removes the fragile dependency from the critical path entirely.
-2. **`auto_adjust=True` returned back-adjusted closes.** Those are corrected for
-   dividends and splits, so every historical bar of a dividend payer sat *below*
-   the `Close` column on the website — about 0.9% for AAPL two years back, and
-   growing the further back you look. We now read the **unadjusted close**.
-3. **The end date was exclusive**, silently dropping the most recent bar — the
-   one a user is most likely to be checking. `end` is now **inclusive**.
+The primary path is a direct call to Yahoo's chart endpoint using nothing but
+the standard library, which keeps the critical path free of a third-party
+dependency. Two details keep the numbers matching finance.yahoo.com exactly:
 
-The resolution order is **Yahoo chart endpoint → yfinance → synthetic**, and the
-response carries `source`, `note` and `currency` so the UI can state exactly what
-it is showing. A synthetic fallback is always labelled as such, and the note
-explains why the live fetch failed.
+- **Unadjusted closes**, not `adjclose` — back-adjusted prices are corrected
+  for dividends and splits, so they read below the site's own "Close" column.
+- **An inclusive end date** — the most recent bar (the one a user is most
+  likely to be checking) is always included.
 
-> `yfinance` is now only a secondary fallback and its import is optional. It
-> requires Python ≥ 3.10, which is what `render.yaml` provisions; on an older
-> local interpreter the primary path works regardless.
+`yfinance` is only a secondary fallback and its import is optional; it requires
+Python ≥ 3.10, which is what `render.yaml` provisions, but the primary path
+works regardless of the local interpreter version.
 
 ---
 
@@ -245,18 +235,14 @@ python main.py            # serves http://localhost:8000  (docs at /docs)
 
 Open **http://localhost:8000** — the app composes something immediately.
 
-> This used to fail with `Attribute "app" not found in module "main"`.
-> `backend/main.py` put the repository root at the *front* of `sys.path` so it
-> could import `music_engine`, which let the repo-root `main.py` shadow it. The
-> root is now appended instead of inserted, so both imports resolve correctly.
-
-*(Optional)* enable the LLM-polished analyst:
+*(Optional)* enable the Claude-polished analyst note:
 
 ```bash
 cp .env.example .env      # then paste your ANTHROPIC_API_KEY
 ```
 
-Without a key the analyst still works, using grounded rule-based narration.
+`backend/main.py` loads `.env` automatically on startup. Without a key the
+analyst still works, using grounded rule-based narration.
 
 ### Or skip the server entirely
 
@@ -296,6 +282,7 @@ Set `ANTHROPIC_API_KEY` in the Render dashboard to enable the LLM analyst.
 | `GET` | `/` | the app (`standalone.html`) |
 | `GET` | `/api/health` | liveness |
 | `GET` | `/api/market?symbol=&start=&end=` | close / volume / volatility, plus `source`, `note`, `currency` |
+| `POST` | `/api/analyst-note` | grounded facts + draft note → Claude-polished note (falls back to the draft) |
 | `POST` | `/api/compose` | Python-engine pipeline → notes + MIDI (base64) + analyst note |
 
 Both dates are **inclusive**. Interactive docs at `/docs`.

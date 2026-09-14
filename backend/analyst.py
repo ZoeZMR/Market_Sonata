@@ -147,11 +147,13 @@ def _grounded_note(f: Dict[str, Any], features: MarketFeatures) -> str:
 
 _ANALYST_SYSTEM = (
     "You are a concert-programme music analyst. You will be given a set of "
-    "TRUE facts about a generative piano composition and the financial data "
-    "that generated it. Write a vivid, elegant program note (3-4 short "
+    "TRUE facts about a generative composition — for solo piano or a full "
+    "band, whichever the facts describe — and the financial data that "
+    "generated it. Write a vivid, elegant program note (3-4 short "
     "paragraphs). You must ONLY use the facts provided — never invent musical "
-    "details, key signatures, or events that are not in the facts. Write for "
-    "an educated general audience at a graduate music-technology level."
+    "details, instruments, key signatures, or events that are not in the "
+    "facts. Write for an educated general audience at a graduate "
+    "music-technology level."
 )
 
 
@@ -164,7 +166,7 @@ def _llm_note(facts: Dict[str, Any], grounded: str) -> str | None:
 
         client = anthropic.Anthropic(api_key=api_key)
         msg = client.messages.create(
-            model="claude-opus-4-8",
+            model="claude-sonnet-5",
             max_tokens=700,
             system=_ANALYST_SYSTEM,
             messages=[{
@@ -179,7 +181,12 @@ def _llm_note(facts: Dict[str, Any], grounded: str) -> str | None:
         return "".join(
             block.text for block in msg.content if getattr(block, "type", "") == "text"
         ).strip()
-    except Exception:
+    except Exception as exc:                                  # noqa: BLE001
+        # Never let a broken/expired key or model-id change break the note —
+        # the caller always has the grounded text to fall back to. Do log it,
+        # though: an LLM key that silently never fires looks identical to one
+        # that was never set, and that gap is easy to miss.
+        print(f"[analyst] LLM polish failed, using grounded note: {exc!r}")
         return None
 
 
@@ -200,4 +207,18 @@ def analyze(features: MarketFeatures, score: Score) -> Dict[str, Any]:
         "program_note": polished or grounded,
         "used_llm": polished is not None,
         "facts": facts,
+    }
+
+
+def analyze_facts(facts: Dict[str, Any], grounded: str) -> Dict[str, Any]:
+    """
+    Same LLM-polish step as `analyze()`, but for a caller that already has its
+    own grounded facts and draft note — used by the deployed JS engine
+    (`standalone.html`), which computes its own facts client-side and only
+    needs this module for the optional Claude polish.
+    """
+    polished = _llm_note(facts, grounded)
+    return {
+        "program_note": polished or grounded,
+        "used_llm": polished is not None,
     }

@@ -29,13 +29,21 @@ from typing import List, Optional
 # of this module — which broke `python main.py` with "Attribute 'app' not found".
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
+# Load backend/.env if present, so ANTHROPIC_API_KEY set there (per the
+# Quick start in README) actually reaches os.environ. On Render, the
+# dashboard sets real env vars directly and there is no .env file — this is a
+# no-op there, but without it locally the documented ".env" setup never did
+# anything and the analyst silently stayed rule-based.
+from dotenv import load_dotenv
+load_dotenv(os.path.join(os.path.dirname(os.path.abspath(__file__)), ".env"))
+
 from fastapi import FastAPI, HTTPException, Query
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import FileResponse
 from pydantic import BaseModel, Field
 
 from market_data import fetch_market_data
-from analyst import analyze
+from analyst import analyze, analyze_facts
 
 from music_engine.data_to_music import extract_features
 from music_engine.composition import Composer
@@ -67,6 +75,20 @@ class ComposeRequest(BaseModel):
     start: str = Field(..., examples=["2024-01-01"])
     end: str = Field(..., examples=["2024-12-31"])
     n_phrases: int = Field(12, ge=4, le=32)
+
+
+class AnalystNoteRequest(BaseModel):
+    # Deliberately untyped: the deployed JS engine (standalone.html) computes
+    # its own grounded facts client-side, in its own shape. This endpoint's
+    # only job is the optional Claude polish (see analyst.analyze_facts) —
+    # it never invents facts, only rephrases the ones it is handed.
+    facts: dict = Field(..., examples=[{"symbol": "AAPL"}])
+    grounded: str = Field(..., description="The rule-based draft note.")
+
+
+class AnalystNoteResponse(BaseModel):
+    program_note: str
+    used_llm: bool
 
 
 class NoteOut(BaseModel):
@@ -120,6 +142,19 @@ def market(
     if not series.close:
         raise HTTPException(404, "No market data for that symbol/range.")
     return series.to_dict()
+
+
+@app.post("/api/analyst-note", response_model=AnalystNoteResponse)
+def analyst_note(req: AnalystNoteRequest):
+    """
+    Optional Claude polish for the deployed JS engine's analyst note.
+
+    The frontend always has a grounded, rule-based note ready to show
+    immediately; this endpoint tries to improve its prose with Claude and
+    falls back to that same grounded text (used_llm=False) if no API key is
+    configured or the call fails for any reason.
+    """
+    return AnalystNoteResponse(**analyze_facts(req.facts, req.grounded))
 
 
 @app.post("/api/compose", response_model=ComposeResponse)

@@ -96,6 +96,8 @@
   .chip { font-size:11px; padding:5px 11px; border-radius:999px; border:1px solid var(--line-2);
           color:var(--mist); cursor:pointer; background:none; font-family:inherit; }
   .chip.on { background:var(--gold); color:var(--on-gold); border-color:var(--gold); }
+  .chip-label { font-size:10px; padding:5px 2px; color:var(--mist); opacity:.55;
+                text-transform:uppercase; letter-spacing:.06em; align-self:center; }
   .row2 { display:grid; grid-template-columns:1fr 1fr; gap:10px; }
   button.primary {
     width:100%; margin-top:18px; padding:13px; border:none; border-radius:12px;
@@ -256,7 +258,10 @@
       <div class="card" id="analystCard" style="display:none">
         <div style="display:flex;justify-content:space-between;align-items:center">
           <h2 class="display gold">The Analyst's Note</h2>
-          <span class="tag" id="srcTag">synthetic demo data</span>
+          <span style="display:flex;gap:6px">
+            <span class="tag" id="aiTag" style="display:none">Claude-polished</span>
+            <span class="tag" id="srcTag">synthetic demo data</span>
+          </span>
         </div>
         <div class="note" id="noteBody"></div>
         <div class="stats" id="statsBox"></div>
@@ -744,6 +749,59 @@ if(typeof module!=="undefined"&&module.exports){module.exports={syntheticSeries,
 const API_BASE = location.protocol === "file:" ? "http://localhost:8000" : "";
 const REFRESH_MS = 60000;
 
+/* ===================== analyst note: optional Claude polish ===================== */
+// analyze(f,score) below always returns a grounded, rule-based note first —
+// that's what renders immediately and what still works with no backend. This
+// then asks the backend to have Claude rephrase those same grounded facts
+// into more natural prose, and swaps it in if it arrives in time. It can
+// never introduce a fact analyze() didn't already state.
+function buildAnalystFacts(f, score){
+  const sig = score.signature || {};
+  const pitched = [...new Set(score.notes.filter(n=>!["kick","snare","hat"].includes(n.voice)).map(n=>n.voice))];
+  const hasDrums = score.notes.some(n=>["kick","snare","hat"].includes(n.voice));
+  return {
+    symbol: f.symbol,
+    n_days: f.nDays,
+    return_pct: Math.round(f.totalReturn*1000)/10,
+    direction: f.totalReturn>=0 ? "gained" : "lost",
+    trend: Math.round(f.trend*100)/100,
+    key: `${score.keyName} ${score.mode}`,
+    tempo_bpm: Math.round(score.tempo),
+    avg_volatility: Math.round(f.avgVol*100)/100,
+    avg_volume: Math.round(f.avgVolume*100)/100,
+    max_drawdown_pct: Math.round(f.maxDrawdown*1000)/10,
+    n_phrases: f.phrases.length,
+    song_form: "Intro (4 bars) - Verse 1 (8) - Chorus (8) - Verse 2 (8) - Bridge (4) - Chorus (8) - Outro (4)",
+    ensemble: "full band: piano lead, warm pad, bass, plucked arpeggio"
+      + (hasDrums ? ", kick/snare/hat drum kit" : ""),
+    n_notes: score.notes.length,
+    pitched_voices: pitched,
+    ticker_fingerprint: sig.hook ? {
+      mode_family: sig.family, octave: sig.octave, progression_set: sig.progression,
+      chorus_hook_cell: sig.hook, verse_groove_cell: sig.groove, bass_pattern: sig.bass,
+      drum_kit: sig.drums, melodic_span_scale_degrees: sig.span,
+      swing_pct: sig.swing ? Math.round(sig.swing*100) : 0,
+    } : null,
+  };
+}
+
+async function polishAnalystNote(f, score, groundedParas, token){
+  try{
+    const res = await fetch(`${API_BASE}/api/analyst-note`, {
+      method: "POST",
+      headers: {"Content-Type":"application/json"},
+      body: JSON.stringify({facts: buildAnalystFacts(f, score), grounded: groundedParas.join("\n\n")}),
+    });
+    if(!res.ok) return;
+    const data = await res.json();
+    if(token !== renderToken) return;   // a newer piece has since been composed
+    if(data.used_llm && data.program_note){
+      $("noteBody").innerHTML = data.program_note.trim().split(/\n{2,}/).map(p=>`<p>${p}</p>`).join("");
+      $("aiTag").style.display = "";
+    }
+  }catch(e){ /* offline, no backend, or no ANTHROPIC_API_KEY — grounded note already stands */ }
+}
+
 // Fetch a real series from the backend. Throws if the backend is unreachable.
 async function fetchSeries(sym, start, end){
   const url = `${API_BASE}/api/market?symbol=${encodeURIComponent(sym)}`
@@ -760,13 +818,26 @@ async function fetchSeries(sym, start, end){
 
 /* ===================== UI wiring ===================== */
 const $=id=>document.getElementById(id);
-const PRESETS=["AAPL","TSLA","SPY","NVDA","BTC-USD","MSFT"];
+// Quick-pick chips, grouped so a broad spread of markets is discoverable
+// without typing. The symbol input itself already accepts any ticker the
+// backend can resolve (see fetchSeries) — this is purely a shortcut list.
+const PRESET_GROUPS=[
+  {label:"Tech",     symbols:["AAPL","MSFT","NVDA","GOOGL","AMZN","META"]},
+  {label:"Indices",  symbols:["SPY","QQQ","DIA","^GSPC","^IXIC"]},
+  {label:"Crypto",   symbols:["BTC-USD","ETH-USD","SOL-USD"]},
+  {label:"More",     symbols:["TSLA","AMD","NFLX","JPM","XOM","DIS"]},
+];
 let current=null, playing=false, rollProgress=0, rafId=null, playDur=0, seekOffset=0;
+let renderToken=0;  // bumped on every render(); guards a late analyst-note reply from a stale compose
 let midiUrl=null;   // revoked and reissued on every compose
 
 // presets
-PRESETS.forEach(p=>{const b=document.createElement("button");b.className="chip";b.textContent=p;b.onclick=()=>{$("symbol").value=p;syncChips();};$("presets").appendChild(b);});
-function syncChips(){[...$("presets").children].forEach(c=>c.classList.toggle("on",c.textContent===$("symbol").value.toUpperCase()));}
+PRESET_GROUPS.forEach(g=>{
+  const lab=document.createElement("span"); lab.className="chip-label"; lab.textContent=g.label;
+  $("presets").appendChild(lab);
+  g.symbols.forEach(p=>{const b=document.createElement("button");b.className="chip";b.textContent=p;b.onclick=()=>{$("symbol").value=p;syncChips();};$("presets").appendChild(b);});
+});
+function syncChips(){[...$("presets").children].forEach(c=>{if(c.classList.contains("chip"))c.classList.toggle("on",c.textContent===$("symbol").value.toUpperCase());});}
 $("symbol").addEventListener("input",syncChips); syncChips();
 
 /* ---------- theme: auto / light / dark ----------
@@ -990,8 +1061,13 @@ function render(){
   playDur=0; paintProgress(0);   // new piece: reset the scrub bar and its clock
   drawRoll();
 
-  // analyst
-  $("noteBody").innerHTML=analyze(feat,score).map(p=>`<p>${p}</p>`).join("");
+  // analyst — render the grounded note immediately, then try to have Claude
+  // polish its prose in the background (see polishAnalystNote).
+  const myToken = ++renderToken;
+  const groundedParas = analyze(feat,score);
+  $("noteBody").innerHTML = groundedParas.map(p=>`<p>${p}</p>`).join("");
+  $("aiTag").style.display = "none";
+  polishAnalystNote(feat, score, groundedParas, myToken);
   const sig=score.signature||{};
   const stats=[["Mode",`${score.keyName} ${score.mode}`],
     ["Total return",(feat.totalReturn*100).toFixed(1)+"%"],["Avg. volatility",Math.round(feat.avgVol*100)+"%"],
