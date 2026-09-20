@@ -29,6 +29,12 @@ import numpy as np
 _UA = ("Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 "
        "(KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36")
 _CHART_URL = "https://query2.finance.yahoo.com/v8/finance/chart/{symbol}"
+_SEARCH_URL = "https://query2.finance.yahoo.com/v1/finance/search"
+
+# Quote types worth surfacing in the ticker search box. Yahoo's search also
+# returns "OPTION", "MUTUALFUND", "FUTURE" etc. that the engine can technically
+# chart but that are rarely what someone typing a company name wants.
+_SEARCH_TYPES = {"EQUITY", "ETF", "INDEX", "CRYPTOCURRENCY", "CURRENCY"}
 
 
 @dataclass
@@ -213,6 +219,43 @@ def fetch_market_data(symbol: str, start: str, end: str) -> MarketSeries:
     series = _synthetic_series(symbol, start, end)
     series.note = "Live data unavailable (" + "; ".join(problems) + ")"
     return series
+
+
+def search_symbols(query: str, limit: int = 8) -> List[Dict[str, str]]:
+    """
+    Resolve a free-text query (a company name, a partial ticker) to a short
+    list of tickers Market Sonata can compose from, via Yahoo's public search
+    endpoint. `fetch_market_data` already accepts *any* symbol Yahoo knows —
+    this is purely a discovery aid so a user does not need to already know the
+    exact ticker (see the "More stocks" quick-pick chips, which only cover a
+    couple dozen symbols by hand).
+    """
+    query = query.strip()
+    if not query:
+        return []
+
+    url = f"{_SEARCH_URL}?{urllib.parse.urlencode({'q': query, 'quotesCount': limit, 'newsCount': 0})}"
+    req = urllib.request.Request(url, headers={"User-Agent": _UA,
+                                               "Accept": "application/json"})
+    with urllib.request.urlopen(req, timeout=8) as resp:
+        payload = json.load(resp)
+
+    out: List[Dict[str, str]] = []
+    for q in payload.get("quotes") or []:
+        symbol = q.get("symbol")
+        qtype = (q.get("quoteType") or "").upper()
+        if not symbol or qtype not in _SEARCH_TYPES:
+            continue
+        name = q.get("longname") or q.get("shortname") or symbol
+        out.append({
+            "symbol": symbol,
+            "name": name,
+            "exchange": q.get("exchDisp") or q.get("exchange") or "",
+            "type": qtype,
+        })
+        if len(out) >= limit:
+            break
+    return out
 
 
 def _synthetic_series(symbol: str, start: str, end: str,

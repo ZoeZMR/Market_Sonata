@@ -6,9 +6,10 @@
 <title>Market Sonata — Standalone Demo</title>
 <link rel="preconnect" href="https://fonts.googleapis.com" />
 <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,400;0,600;1,400&family=Inter:wght@300;400;500;600&display=swap" rel="stylesheet" />
-<!-- Tone.js for in-browser playback, Plotly for interactive charts -->
+<!-- Tone.js for in-browser playback, Plotly for interactive charts, VexFlow for the sheet-music view -->
 <script src="https://cdnjs.cloudflare.com/ajax/libs/tone/15.0.4/Tone.js"></script>
 <script src="https://cdn.plot.ly/plotly-basic-2.35.2.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/vexflow/4.2.2/vexflow-min.js"></script>
 <script>
   // Resolve the theme BEFORE first paint so a light-mode visitor never sees a
   // dark flash. Precedence: ?theme= in the URL > saved choice > system setting.
@@ -80,6 +81,12 @@
   h1.display { font-size: 44px; margin: 0; }
   .sub { letter-spacing: .3em; text-transform: uppercase; font-size: 11px; }
   .grid { display:grid; grid-template-columns: 380px 1fr; gap: 20px; margin-top: 24px; }
+  /* Without this, a fixed-width descendant (the sheet-music SVG, sized to fit
+     several bars per line) forces the 1fr column's automatic min-width past
+     the viewport, inflating the whole page — the SVG's own overflow-x:auto
+     isn't enough to stop a CSS Grid track from sizing to its content's
+     max-content width. */
+  .grid > .space { min-width: 0; }
   @media (max-width: 900px){ .grid{ grid-template-columns: 1fr; } }
   .card { background: var(--card); border:1px solid var(--line);
           border-radius: 18px; padding: 20px; backdrop-filter: blur(6px); }
@@ -101,6 +108,18 @@
           color:var(--mist); cursor:pointer; background:none; font-family:inherit; }
   .chip.on { background:var(--gold); color:var(--on-gold); border-color:var(--gold); }
   .row2 { display:grid; grid-template-columns:1fr 1fr; gap:10px; }
+  /* ticker search dropdown — free-text discovery, not just the quick chips */
+  .symbol-wrap { position:relative; }
+  .search-drop { position:absolute; left:0; right:0; top:calc(100% + 4px); z-index:20;
+    background:var(--card); border:1px solid var(--line-2); border-radius:12px;
+    box-shadow:0 10px 28px rgba(0,0,0,.2); max-height:230px; overflow-y:auto; }
+  .search-drop .opt { padding:8px 12px; cursor:pointer; font-size:13px;
+    display:flex; align-items:baseline; justify-content:space-between; gap:10px; }
+  .search-drop .opt:hover, .search-drop .opt.active { background:var(--card-2); }
+  .search-drop .opt .sym { font-weight:600; color:var(--ink); flex:0 0 auto; }
+  .search-drop .opt .nm { color:var(--mist); font-size:11px; overflow:hidden;
+    text-overflow:ellipsis; white-space:nowrap; text-align:right; min-width:0; flex:1 1 auto; }
+  .search-drop .msg { padding:10px 12px; font-size:12px; color:var(--mist); }
   button.primary {
     width:100%; margin-top:18px; padding:13px; border:none; border-radius:12px;
     background:var(--gold); color:var(--on-gold); font-weight:600; letter-spacing:.15em;
@@ -131,6 +150,13 @@
                 background:none; color:var(--mist); cursor:pointer; }
   .mix button.off { opacity:.45; }
   .mix button.off .sw { background:none !important; box-shadow:inset 0 0 0 1px var(--line-2); }
+  /* per-voice instrument pickers */
+  .inst-grid { display:grid; grid-template-columns:1fr 1fr; gap:8px 14px; margin-top:10px; }
+  .inst-row { display:flex; align-items:center; justify-content:space-between; gap:8px; }
+  .inst-row .sw { flex:0 0 auto; }
+  .inst-row span.lbl { font-size:12px; color:var(--mist); display:flex; align-items:center; }
+  .inst-row select { font-family:inherit; font-size:11px; background:var(--field);
+    border:1px solid var(--line-2); color:var(--ink); border-radius:8px; padding:4px 6px; cursor:pointer; }
   .transport { display:flex; align-items:center; gap:8px; flex-wrap:wrap; margin-top:12px;
                font-size:11px; color:var(--mist); }
   /* draggable progress / scrub bar */
@@ -148,6 +174,9 @@
   .charthint { font-size:10px; color:var(--faint); margin:4px 0 0; }
   canvas { width:100%; display:block; border-radius:10px; cursor:pointer; }
   .plot { width:100%; }
+  .sheet-wrap { overflow-x:auto; background:var(--roll-bg); border:1px solid var(--line);
+    border-radius:10px; padding:10px 4px; }
+  .sheet-wrap svg { display:block; }
   .stats { display:grid; grid-template-columns:repeat(3,1fr); gap:10px; margin-top:16px; }
   .stat { background:var(--card-2); border:1px solid var(--line); border-radius:10px; padding:8px 10px; }
   .stat .k { font-size:9px; letter-spacing:.2em; text-transform:uppercase; color:var(--mist); }
@@ -190,7 +219,10 @@
       <div class="card">
         <h2 class="display gold">Select a Market</h2>
         <label>Symbol</label>
-        <input id="symbol" value="AAPL" />
+        <div class="symbol-wrap">
+          <input id="symbol" value="AAPL" autocomplete="off" spellcheck="false" />
+          <div class="search-drop" id="searchDrop" style="display:none"></div>
+        </div>
         <div class="presets" id="presets"></div>
         <div class="row2" style="margin-top:6px">
           <div><label>From</label><input id="start" type="date" value="2024-01-01" /></div>
@@ -249,6 +281,8 @@
         <div class="times"><span id="tNow">0:00</span><span id="tTotal">0:00</span></div>
         <!-- Voice mixer: each button mutes/unmutes a voice, live, mid-playback. -->
         <div class="mix" id="mixer" aria-label="Voice mixer"></div>
+        <!-- Instrument picker: each voice's timbre, rebuilt live from Tone.js presets. -->
+        <div class="inst-grid" id="instGrid" aria-label="Instrument picker"></div>
         <div class="transport">
           <label for="volume" style="margin:0;letter-spacing:.2em">Volume</label>
           <input type="range" id="volume" min="0" max="100" value="85" />
@@ -256,6 +290,19 @@
           <span style="color:var(--faint)">·</span>
           <span class="charthint" style="margin:0">click the roll to seek · space to play/stop · MIDI always holds the full score</span>
         </div>
+      </div>
+
+      <div class="card" id="sheetCard" style="display:none">
+        <div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:10px">
+          <h2 class="display gold">Sheet Music</h2>
+          <div style="display:flex;gap:8px">
+            <button class="btn-ghost" id="sheetPngBtn">↓ PNG</button>
+          </div>
+        </div>
+        <p class="charthint" style="margin:0 0 10px">
+          lead melody, with chord symbols read off the accompaniment · quantized to the nearest sixteenth note
+        </p>
+        <div class="sheet-wrap" id="sheetWrap"></div>
       </div>
 
       <div class="card" id="analystCard" style="display:none">
@@ -854,6 +901,53 @@ PRESET_GROUPS.forEach(g=>{
 function syncChips(){[...$("presets").querySelectorAll(".chip")].forEach(c=>c.classList.toggle("on",c.textContent===$("symbol").value.toUpperCase()));}
 $("symbol").addEventListener("input",syncChips); syncChips();
 
+/* ---------- ticker search: type a company name, not just a known symbol ----------
+   The backend already resolves any ticker Yahoo knows (see fetchSeries) — this
+   is purely a discovery aid so a user doesn't need to already have one in mind.
+   Degrades silently with no backend: the symbol box still takes direct tickers. */
+let searchAbort=null, searchTimer=null, searchActiveIdx=-1;
+function hideSearch(){ $("searchDrop").style.display="none"; $("searchDrop").innerHTML=""; searchActiveIdx=-1; }
+function renderSearchResults(list){
+  const drop=$("searchDrop");
+  if(!list.length){ drop.innerHTML='<div class="msg">no matches</div>'; drop.style.display="block"; return; }
+  drop.innerHTML=list.map((r,i)=>`<div class="opt" data-i="${i}" data-symbol="${r.symbol}">
+      <span class="sym">${r.symbol}</span><span class="nm">${r.name}${r.exchange?" · "+r.exchange:""}</span>
+    </div>`).join("");
+  [...drop.querySelectorAll(".opt")].forEach(el=>{
+    el.onclick=()=>{ $("symbol").value=el.dataset.symbol; syncChips(); hideSearch(); $("symbol").focus(); };
+  });
+  drop.style.display="block";
+}
+async function runSearch(q){
+  if(searchAbort)searchAbort.abort();
+  searchAbort=new AbortController();
+  try{
+    const res=await fetch(`${API_BASE}/api/search?q=${encodeURIComponent(q)}`,{signal:searchAbort.signal});
+    if(!res.ok){ hideSearch(); return; }
+    const data=await res.json();
+    renderSearchResults(data.results||[]);
+  }catch(e){ /* aborted mid-type, offline, or no backend */ }
+}
+$("symbol").addEventListener("input",()=>{
+  const q=$("symbol").value.trim();
+  clearTimeout(searchTimer);
+  if(q.length<2){ hideSearch(); return; }
+  searchTimer=setTimeout(()=>runSearch(q),250);
+});
+$("symbol").addEventListener("keydown",e=>{
+  const drop=$("searchDrop");
+  if(drop.style.display==="none")return;
+  const opts=[...drop.querySelectorAll(".opt")];
+  if(!opts.length)return;
+  if(e.key==="ArrowDown"){ e.preventDefault(); searchActiveIdx=Math.min(opts.length-1,searchActiveIdx+1); }
+  else if(e.key==="ArrowUp"){ e.preventDefault(); searchActiveIdx=Math.max(0,searchActiveIdx-1); }
+  else if(e.key==="Enter"&&searchActiveIdx>=0){ e.preventDefault(); opts[searchActiveIdx].click(); return; }
+  else if(e.key==="Escape"){ hideSearch(); return; }
+  else return;
+  opts.forEach((o,i)=>o.classList.toggle("active",i===searchActiveIdx));
+});
+document.addEventListener("click",e=>{ if(!e.target.closest(".symbol-wrap"))hideSearch(); });
+
 /* ---------- theme: auto / light / dark ----------
    The <head> script already picked a theme before first paint; here we wire the
    switch, persist the choice, and follow the system when the choice is "auto".
@@ -981,6 +1075,208 @@ function drawRoll(){
   // playhead
   ctx.globalAlpha=1;ctx.fillStyle=css("--playhead");ctx.fillRect(rollProgress*w,0,2,h);
 }
+
+/* ---------- sheet music: the lead melody as real staff notation (VexFlow) ----------
+   The engine's notes are performance data (arbitrary-length beats, meant for
+   Tone.js), not notation — so this quantizes the melody to a 16th-note grid,
+   fills silence with rests, ties notes that don't fit a standard duration or
+   that cross a barline, and reads chord symbols straight off the pad voice
+   (which always strikes the bar's chord on beat 1) rather than reaching back
+   into the composer's internals. Purely additive: the audio engine, the piano
+   roll and the MIDI export are untouched.                                    */
+const SHEET_NOTE_NAMES=["c","c#","d","d#","e","f","f#","g","g#","a","a#","b"];
+const SHEET_GRID=0.25;          // sixteenth note, in beats
+const SHEET_CELLS_PER_BAR=16;   // 4/4 at a 16th-note grid
+// Greedy decomposition of a run of N grid cells into notatable durations
+// (16th-note units): whole, dotted-half, half, dotted-quarter, quarter,
+// dotted-8th, 8th, 16th — largest first, so a plain 4-cell run is one quarter
+// note rather than four tied sixteenths.
+const SHEET_DUR_CELLS=[[16,"w"],[12,"hd"],[8,"h"],[6,"qd"],[4,"q"],[3,"8d"],[2,"8"],[1,"16"]];
+function sheetSplitRun(cells){
+  const out=[];
+  while(cells>0){
+    const [n,code]=SHEET_DUR_CELLS.find(([n])=>n<=cells);
+    out.push(code); cells-=n;
+  }
+  return out;
+}
+function sheetPitchName(midi){
+  const pc=((midi%12)+12)%12, name=SHEET_NOTE_NAMES[pc], oct=Math.floor(midi/12)-1;
+  return {key:`${name}/${oct}`, letterOct:name[0]+oct, sharp:name.length>1};
+}
+// Best-effort chord symbol from the pad voice's simultaneous pitches at a bar's
+// downbeat, named against the bass voice's root — a label, not a claim that
+// every mode reduces cleanly to standard triads.
+function sheetChordAt(notes,bar){
+  const eps=1e-6;
+  const bassNs=notes.filter(n=>n.voice==="bass"&&n.start>=bar-eps&&n.start<bar+4-eps);
+  if(!bassNs.length)return null;
+  const rootPc=((bassNs.reduce((a,b)=>a.start<=b.start?a:b).pitch%12)+12)%12;
+  const padPcs=[...new Set(notes.filter(n=>n.voice==="pad"&&Math.abs(n.start-bar)<eps).map(n=>((n.pitch%12)+12)%12))];
+  if(!padPcs.length)return NOTE_NAMES[rootPc];
+  const ivs=new Set(padPcs.map(pc=>((pc-rootPc)%12+12)%12));
+  const has=x=>ivs.has(x);
+  let q="";
+  if(has(3)&&has(6)&&!has(7))q="dim";
+  else if(has(4)&&has(8)&&!has(7))q="aug";
+  else if(has(3)&&has(7))q="m";
+  else if(has(2)&&has(7)&&!has(3)&&!has(4))q="sus2";
+  else if(has(5)&&has(7)&&!has(3)&&!has(4))q="sus4";
+  if(has(10))q+="7"; else if(has(11)&&q==="")q="maj7";
+  return NOTE_NAMES[rootPc]+q;
+}
+function renderSheetMusic(score){
+  const wrap=$("sheetWrap");
+  wrap.innerHTML="";
+  if(typeof Vex==="undefined"){ wrap.innerHTML='<p class="badge">notation library unavailable</p>'; return; }
+  const VF=Vex.Flow;
+  const totalBars=Math.max(1,Math.ceil((score.totalBeats-1e-6)/4));
+  const totalCells=totalBars*SHEET_CELLS_PER_BAR;
+
+  // ---- lay the melody onto a 16th-note grid: cell -> {pitch,onset} | null ----
+  const cellPitch=new Array(totalCells).fill(null);
+  const melody=score.notes.filter(n=>n.voice==="melody").sort((a,b)=>a.start-b.start);
+  // Drop the final-chorus octave doubling (a simultaneous copy a 12th higher,
+  // added purely to thicken the audio) so the sheet shows one melodic line.
+  const primary=[];
+  for(const n of melody){
+    const dup=primary.length&&Math.abs(primary[primary.length-1].start-n.start)<1e-6
+      &&Math.abs(primary[primary.length-1].pitch-n.pitch)===12;
+    if(!dup)primary.push(n);
+  }
+  primary.forEach((n,i)=>{
+    const startCell=Math.round(n.start/SHEET_GRID);
+    if(startCell>=totalCells)return;
+    const nextStart=i+1<primary.length?Math.round(primary[i+1].start/SHEET_GRID):totalCells;
+    const avail=Math.max(1,Math.min(nextStart,totalCells)-startCell);
+    const lenCells=Math.max(1,Math.min(Math.round(n.duration/SHEET_GRID),avail));
+    for(let c=startCell;c<startCell+lenCells;c++)cellPitch[c]={pitch:n.pitch,onset:c===startCell};
+  });
+
+  // ---- render, four bars per system ----
+  // The melody voice sits high (often several ledger lines above the staff —
+  // that register is a real, deterministic choice made from the ticker and
+  // market, not a rendering bug), so each system needs generous headroom
+  // above its stave for both the ledger lines and the two label rows.
+  const BARS_PER_LINE=4, BAR_W=210, FIRST_PAD=60, LINE_H=170, STAVE_PAD_TOP=64;
+  const lines=Math.ceil(totalBars/BARS_PER_LINE);
+  const width=FIRST_PAD+BARS_PER_LINE*BAR_W+20;
+  const renderer=new VF.Renderer(wrap,VF.Renderer.Backends.SVG);
+  renderer.resize(width,lines*LINE_H+40);
+  const ctx=renderer.getContext();
+  ctx.setFillStyle(css("--ink")); ctx.setStrokeStyle(css("--ink"));
+  const allTies=[];   // ties can span a barline, so these are drawn once at the end
+  let carryTie=null;  // the previous bar's last pitched StaveNote, for cross-bar ties
+
+  for(let line=0;line<lines;line++){
+    const barsHere=Math.min(BARS_PER_LINE,totalBars-line*BARS_PER_LINE);
+    let x=10, y=STAVE_PAD_TOP+line*LINE_H;
+    for(let bi=0;bi<barsHere;bi++){
+      const barIdx=line*BARS_PER_LINE+bi;
+      const bar=barIdx*4;
+      const isFirst=bi===0;
+      const w=isFirst?FIRST_PAD+BAR_W-10:BAR_W;
+      const stave=new VF.Stave(x,y,w);
+      if(isFirst){ stave.addClef("treble"); if(line===0)stave.addTimeSignature("4/4"); }
+      stave.setContext(ctx).draw();
+
+      // section label above the bar it starts on
+      const sec=score.sections.find(s=>Math.round(s.start/4)===barIdx);
+      if(sec){
+        ctx.save(); ctx.setFillStyle(css("--good")); ctx.setFont("Inter, sans-serif","10px","bold");
+        ctx.fillText(sec.name.toUpperCase(),x+(isFirst?38:6),y-58); ctx.restore();
+      }
+      // chord symbol above the bar
+      const chord=sheetChordAt(score.notes,bar);
+      if(chord){
+        ctx.save(); ctx.setFillStyle(css("--gold-ink")); ctx.setFont("Inter, sans-serif","12px","600");
+        ctx.fillText(chord,x+(isFirst?38:6),y-40); ctx.restore();
+      }
+
+      // ---- this bar's cells -> tied runs of notes/rests ----
+      const cells=cellPitch.slice(barIdx*16,barIdx*16+16);
+      const runs=[]; // {pitch|null, len, tiedFromPrev}
+      let i=0;
+      while(i<16){
+        const cell=cells[i];
+        const key=cell?cell.pitch:null;
+        let len=1;
+        while(i+len<16){
+          const nx=cells[i+len];
+          const nk=nx?nx.pitch:null;
+          if(nk!==key)break;
+          if(nx&&nx.onset)break; // a new onset always starts a fresh run
+          len++;
+        }
+        runs.push({pitch:key,len,tiedFromPrev:cell&&!cell.onset&&i===0});
+        i+=len;
+      }
+
+      const staveNotes=[];
+      const shown=new Map(); // accidental already shown this bar, per letter+octave
+      runs.forEach(run=>{
+        const durs=sheetSplitRun(run.len);
+        durs.forEach((code,di)=>{
+          let sn;
+          if(run.pitch===null){
+            sn=new VF.StaveNote({keys:["b/4"],duration:code+"r"});
+            carryTie=null;
+          } else {
+            const {key,letterOct,sharp}=sheetPitchName(run.pitch);
+            sn=new VF.StaveNote({keys:[key],duration:code});
+            if(sharp&&shown.get(letterOct)!==true){
+              sn.addModifier(0,new VF.Accidental("#")); shown.set(letterOct,true);
+            } else if(!sharp){
+              shown.set(letterOct,false);
+            }
+            if((di>0||(run.tiedFromPrev&&di===0))&&carryTie){
+              allTies.push({first:carryTie,last:sn});
+            }
+            carryTie=sn;
+          }
+          staveNotes.push(sn);
+        });
+      });
+
+      const voice=new VF.Voice({num_beats:4,beat_value:4}).setStrict(false);
+      voice.addTickables(staveNotes);
+      new VF.Formatter().joinVoices([voice]).format([voice],w-(isFirst?60:20));
+      voice.draw(ctx,stave);
+      VF.Beam.generateBeams(staveNotes.filter(n=>!n.isRest())).forEach(b=>b.setContext(ctx).draw());
+
+      x+=w;
+    }
+  }
+  allTies.forEach(({first,last})=>new VF.StaveTie({first_note:first,last_note:last}).setContext(ctx).draw());
+}
+function downloadSheetPng(){
+  const svg=$("sheetWrap").querySelector("svg");
+  if(!svg)return;
+  const xml=new XMLSerializer().serializeToString(svg);
+  const svgBlob=new Blob([xml],{type:"image/svg+xml;charset=utf-8"});
+  const url=URL.createObjectURL(svgBlob);
+  const img=new Image();
+  img.onload=()=>{
+    const w=+svg.getAttribute("width")||svg.clientWidth||900;
+    const h=+svg.getAttribute("height")||svg.clientHeight||200;
+    const scale=2; // crisper export than the on-screen SVG's CSS size
+    const cv=document.createElement("canvas"); cv.width=w*scale; cv.height=h*scale;
+    const cx=cv.getContext("2d");
+    cx.fillStyle=getComputedStyle(document.body).backgroundColor||"#fff";
+    cx.fillRect(0,0,cv.width,cv.height);
+    cx.scale(scale,scale); cx.drawImage(img,0,0);
+    URL.revokeObjectURL(url);
+    cv.toBlob(blob=>{
+      const a=document.createElement("a");
+      a.href=URL.createObjectURL(blob);
+      a.download=`${current?current.series.symbol:"sonata"}_sheet.png`;
+      a.click();
+      setTimeout(()=>URL.revokeObjectURL(a.href),2000);
+    });
+  };
+  img.src=url;
+}
+$("sheetPngBtn").onclick=downloadSheetPng;
 
 /* ---------- scrubbing: drag the bar, or click the roll ---------- */
 // Length of the piece in seconds, known as soon as it is composed.
@@ -1215,7 +1511,7 @@ updatePointsTag();
 
 function render(){
   $("emptyState").style.display="none";
-  ["chartsCard","playerCard","analystCard","predictCard"].forEach(id=>$(id).style.display="block");
+  ["chartsCard","playerCard","sheetCard","analystCard","predictCard"].forEach(id=>$(id).style.display="block");
   const {series,feat,score}=current;
   // data-source badge in the Analyst's Note
   const srcTag=$("srcTag");
@@ -1235,6 +1531,7 @@ function render(){
   $("secNow").textContent="";
   playDur=0; paintProgress(0);   // new piece: reset the scrub bar and its clock
   drawRoll();
+  renderSheetMusic(score);
 
   // analyst — render the grounded note immediately, then try to have Claude
   // polish its prose in the background (see polishAnalystNote).
@@ -1328,32 +1625,84 @@ function startLive(){ stopLive(); setLiveDot("on"); refreshTick(); liveTimer=set
 function stopLive(){ if(liveTimer){clearInterval(liveTimer);liveTimer=null;} setLiveDot("off"); }
 $("liveToggle").addEventListener("change",e=>{ e.target.checked?startLive():stopLive(); });
 
+/* ---------- instrument choice: per-voice Tone.js timbre presets ----------
+   Sample-free by design — every preset is a Tone.js oscillator/envelope
+   config, so switching is instant and never fetches an asset. Each pitched
+   voice keeps its ORIGINAL sound as "default" (nothing changes for anyone who
+   never touches the picker); the alternates are shared, generic timbres that
+   just aren't the one this voice shipped with.                              */
+const VOICE_DEFAULT_POLY={
+  melody:{type:"triangle",  env:{attack:.02, decay:.4, sustain:.25,release:1.6}, vol:-7},
+  pad:   {type:"sawtooth",  env:{attack:.6,  decay:.5, sustain:.6, release:2.2}, vol:-16},
+  arp:   {type:"sine",      env:{attack:.005,decay:.18,sustain:.05,release:.4}, vol:-14},
+};
+const ALT_POLY_PRESETS={
+  piano:  {type:"sine",        env:{attack:.005,decay:1.0,sustain:.05,release:.9}},
+  pluck:  {type:"triangle",    env:{attack:.001,decay:.5, sustain:0,  release:.3}},
+  organ:  {type:"square",      env:{attack:.02, decay:.05,sustain:.9, release:.15}},
+  strings:{type:"fatsawtooth", count:3, spread:20, env:{attack:.5,decay:.3,sustain:.8,release:1.8}},
+};
+const BASS_DEFAULT={osc:{type:"triangle"},env:{attack:.01,decay:.3,sustain:.5,release:.4},
+  filterEnv:{attack:.01,decay:.2,sustain:.4,release:.3,baseFrequency:120,octaves:2.5},vol:-6};
+const ALT_BASS={
+  deep:  {osc:{type:"sine"},    env:{attack:.02,decay:.4, sustain:.6,release:.5},
+    filterEnv:{attack:.02,decay:.3,sustain:.5,release:.4,baseFrequency:80, octaves:2}},
+  pluck: {osc:{type:"triangle"},env:{attack:.005,decay:.3,sustain:0,  release:.2},
+    filterEnv:{attack:.005,decay:.2,sustain:0,release:.15,baseFrequency:150,octaves:2.5}},
+  growl: {osc:{type:"sawtooth"},env:{attack:.01,decay:.25,sustain:.6,release:.35},
+    filterEnv:{attack:.01,decay:.15,sustain:.5,release:.3,baseFrequency:200,octaves:3.5}},
+};
+const GROUP_BAND_KEY={melody:"lead",pad:"pad",bass:"bass",arp:"arp"};
+const INSTRUMENTS={melody:"default",pad:"default",bass:"default",arp:"default"};
+function makePolyVoice(group,typeKey){
+  const def=VOICE_DEFAULT_POLY[group];
+  const p=(typeKey&&typeKey!=="default"&&ALT_POLY_PRESETS[typeKey])?ALT_POLY_PRESETS[typeKey]:def;
+  const oscillator=p.count?{type:p.type,count:p.count,spread:p.spread}:{type:p.type};
+  const synth=new Tone.PolySynth(Tone.Synth,{oscillator,envelope:p.env});
+  synth.volume.value=def.vol; // the voice's own level, independent of timbre
+  return synth;
+}
+function makeBassVoice(typeKey){
+  const p=(typeKey&&typeKey!=="default"&&ALT_BASS[typeKey])?ALT_BASS[typeKey]:BASS_DEFAULT;
+  const synth=new Tone.MonoSynth({oscillator:p.osc,envelope:p.env,filterEnvelope:p.filterEnv});
+  synth.volume.value=BASS_DEFAULT.vol;
+  return synth;
+}
+
 /* ---------- playback via Tone.js: full band ----------
    buildBand() constructs the instruments in whatever audio context is current,
    so the very same band is used for live playback and for the offline render
    behind the WAV export — what you download is what you heard.               */
 function buildBand(){
   const rev=new Tone.Reverb({decay:3.5,wet:0.3}).toDestination();
-  const lead=new Tone.PolySynth(Tone.Synth,{oscillator:{type:"triangle"},envelope:{attack:0.02,decay:0.4,sustain:0.25,release:1.6}}).connect(rev);
-  lead.volume.value=-7;
   const padFilter=new Tone.Filter(1100,"lowpass").connect(rev);
-  const pad=new Tone.PolySynth(Tone.Synth,{oscillator:{type:"sawtooth"},envelope:{attack:0.6,decay:0.5,sustain:0.6,release:2.2}}).connect(padFilter);
-  pad.volume.value=-16;
-  const bass=new Tone.MonoSynth({oscillator:{type:"triangle"},envelope:{attack:0.01,decay:0.3,sustain:0.5,release:0.4},
-    filterEnvelope:{attack:0.01,decay:0.2,sustain:0.4,release:0.3,baseFrequency:120,octaves:2.5}}).toDestination();
-  bass.volume.value=-6;
-  const arp=new Tone.PolySynth(Tone.Synth,{oscillator:{type:"sine"},envelope:{attack:0.005,decay:0.18,sustain:0.05,release:0.4}}).connect(rev);
-  arp.volume.value=-14;
+  const lead=makePolyVoice("melody",INSTRUMENTS.melody).connect(rev);
+  const pad=makePolyVoice("pad",INSTRUMENTS.pad).connect(padFilter);
+  const bass=makeBassVoice(INSTRUMENTS.bass).toDestination();
+  const arp=makePolyVoice("arp",INSTRUMENTS.arp).connect(rev);
   const kick=new Tone.MembraneSynth({pitchDecay:0.04,octaves:6,envelope:{attack:0.001,decay:0.35,sustain:0}}).toDestination();
   kick.volume.value=-4;
   const snare=new Tone.NoiseSynth({noise:{type:"white"},envelope:{attack:0.001,decay:0.16,sustain:0}}).connect(new Tone.Filter(1800,"highpass").toDestination());
   snare.volume.value=-12;
   const hat=new Tone.NoiseSynth({noise:{type:"white"},envelope:{attack:0.001,decay:0.045,sustain:0}}).connect(new Tone.Filter(8000,"highpass").toDestination());
   hat.volume.value=-20;
-  return {lead,pad,bass,arp,kick,snare,hat,rev};
+  return {lead,pad,bass,arp,kick,snare,hat,rev,padFilter};
 }
 let band=null;
 function getBand(){ if(!band) band=buildBand(); return band; }
+// Rebuild just one voice's instrument, live — the transport reads band[group]
+// at each note's trigger time, so a mid-playback swap takes effect on the very
+// next note without stopping anything.
+function setInstrument(group,typeKey){
+  INSTRUMENTS[group]=typeKey;
+  if(!band)return; // no audio context yet — the choice applies whenever one is built
+  const bandKey=GROUP_BAND_KEY[group];
+  const old=band[bandKey];
+  const fresh=group==="bass"?makeBassVoice(typeKey):makePolyVoice(group,typeKey);
+  fresh.connect(group==="bass"?Tone.getDestination():group==="pad"?band.padFilter:band.rev);
+  band[bandKey]=fresh;
+  try{old.dispose();}catch(e){}
+}
 function releaseVoice(group){
   if(!band)return;
   try{
@@ -1364,6 +1713,27 @@ function releaseVoice(group){
   }catch(e){}
 }
 function releaseAll(){ ["melody","pad","arp","bass"].forEach(releaseVoice); }
+
+/* ---------- instrument picker UI ---------- */
+const INSTRUMENT_OPTIONS={
+  melody:[["default","Synth"],["piano","Piano"],["pluck","Pluck"],["organ","Organ"],["strings","Strings"]],
+  pad:   [["default","Pad"],  ["piano","Piano"],["pluck","Pluck"],["organ","Organ"],["strings","Strings"]],
+  bass:  [["default","Synth"],["deep","Deep"],  ["pluck","Pluck"],["growl","Growl"]],
+  arp:   [["default","Sparkle"],["piano","Piano"],["pluck","Pluck"],["organ","Organ"],["strings","Strings"]],
+};
+const INST_ROW_LABEL={melody:"lead",pad:"pad",bass:"bass",arp:"arpeggio"};
+Object.keys(INSTRUMENT_OPTIONS).forEach(group=>{
+  const row=document.createElement("div"); row.className="inst-row";
+  const lab=document.createElement("span"); lab.className="lbl";
+  lab.innerHTML=`<span class="sw" style="background:var(--v-${group})"></span>${INST_ROW_LABEL[group]}`;
+  const sel=document.createElement("select"); sel.setAttribute("aria-label",`${INST_ROW_LABEL[group]} instrument`);
+  INSTRUMENT_OPTIONS[group].forEach(([val,label])=>{
+    const opt=document.createElement("option"); opt.value=val; opt.textContent=label; sel.appendChild(opt);
+  });
+  sel.onchange=()=>setInstrument(group,sel.value);
+  row.append(lab,sel);
+  $("instGrid").appendChild(row);
+});
 
 // Fire one note on the given band. Shared by live playback and offline render.
 function triggerNote(B,n,t,durS,v){

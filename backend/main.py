@@ -42,7 +42,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import FileResponse
 from pydantic import BaseModel, Field
 
-from market_data import fetch_market_data
+from market_data import fetch_market_data, search_symbols
 from analyst import analyze, analyze_facts
 
 from music_engine.data_to_music import extract_features
@@ -142,6 +142,22 @@ def market(
     if not series.close:
         raise HTTPException(404, "No market data for that symbol/range.")
     return series.to_dict()
+
+
+@app.get("/api/search")
+def search(q: str = Query(..., min_length=1, description="Company name or ticker fragment")):
+    """
+    Ticker discovery for the symbol box: resolves a free-text query to real
+    tickers via Yahoo's search endpoint, so a user does not need to already
+    know a symbol. `/api/market` and `/api/compose` already accept any ticker
+    Yahoo resolves — this only makes those tickers findable.
+    """
+    try:
+        return {"results": search_symbols(q)}
+    except Exception:
+        # Best-effort discovery aid; a failure here should never block typing
+        # a symbol directly into the box.
+        return {"results": []}
 
 
 @app.post("/api/analyst-note", response_model=AnalystNoteResponse)
