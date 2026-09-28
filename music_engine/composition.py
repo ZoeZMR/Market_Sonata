@@ -352,18 +352,20 @@ class Composer:
             score.add(Note(pitch, t, dur * 0.95, vel, "melody"))
             t += dur
 
-        # 2) HARMONY — a sustained chord underpinning the phrase ----------
+        # 2) HARMONY — the phrase's chords, one after another -------------
+        # A two-chord step like I–V splits the phrase in half; sounding both
+        # at once would stack them into a muddy polychord.
         root_degrees = self._chord_for_phrase(phrase.index)
-        for rd in root_degrees:
-            chord = self._build_chord(rd, phrase)
-            chord_vel = self._velocity(phrase, accent=0.6)
-            for p in chord:
-                score.add(Note(p, start, beats, chord_vel, "harmony"))
+        chord_len = beats / len(root_degrees)
+        chord_vel = self._velocity(phrase, accent=0.6)
+        for k, rd in enumerate(root_degrees):
+            for p in self._build_chord(rd, phrase):
+                score.add(Note(p, start + k * chord_len, chord_len, chord_vel, "harmony"))
 
         # 3) BASS — a minimalist arpeggiated ostinato ---------------------
         # Volume drives how busy the left hand is (more participation = more
         # layers/activity, per the mapping spec).
-        self._render_bass(score, phrase, root_degrees[0], start, beats)
+        self._render_bass(score, phrase, root_degrees, start, beats)
 
         # 4) GAP — an overnight shock lands as a sforzando accent ---------
         if phrase.gap:
@@ -373,7 +375,7 @@ class Composer:
         self,
         score: Score,
         phrase: PhraseFeatures,
-        root_degree: int,
+        root_degrees: List[int],
         start: float,
         beats: float,
     ) -> None:
@@ -381,9 +383,12 @@ class Composer:
         density = int(round(2 + 6 * (0.6 * phrase.volume + 0.4 * phrase.volatility)))
         density = max(2, min(8, density))
         step = beats / density
+        chord_len = beats / len(root_degrees)
         # Broken-chord pattern (root, 5th, octave, 3rd) — Glass-like cells.
         pattern = [0, 4, 7, 2]
         for i in range(density):
+            # Arpeggiate whichever chord is sounding at this beat.
+            root_degree = root_degrees[min(int(i * step // chord_len), len(root_degrees) - 1)]
             deg = root_degree + pattern[i % len(pattern)]
             pitch = self._degree_to_pitch(deg, octave_shift=-2)
             vel = self._velocity(phrase, accent=0.5)

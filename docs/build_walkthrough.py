@@ -294,7 +294,7 @@ def fig_pianoroll():
                  f"(~{dur_s:.0f} s at {score.tempo:.0f} BPM)", pad=6)
     handles = [Rectangle((0, 0), 1, 1, fc=VOICE[v], ec="none") for v in ("melody", "harmony", "bass")]
     handles.append(Rectangle((0, 0), 1, 1, fc=SURF, ec=INK, lw=1.1))
-    ax.legend(handles, ["Melody (right hand)", "Harmony (sustained chord)",
+    ax.legend(handles, ["Melody (right hand)", "Harmony (chords)",
                         "Bass (ostinato)", "Gap accent (velocity 127)"],
               loc="upper center", bbox_to_anchor=(0.5, -0.16), ncol=4, fontsize=7)
     return save(fig, "pianoroll.png")
@@ -513,7 +513,7 @@ story.append(table([
     ["Tempo", "60 + 48 x avg_volatility. Calm markets breathe slowly; volatile ones race.",
      f"60 + 48 x {feat.avg_volatility:.2f} = <b>{score.tempo:.0f} BPM</b>"],
     ["Chord progression", "Major: I-V, V-vi, I, vi-ii, repeating every 4 phrases.",
-     "I+V / V+vi / I / vi+ii"],
+     "I-V / V-vi / I / vi-ii"],
 ], [1.35 * inch, 3.75 * inch, 1.9 * inch]))
 story.append(Spacer(1, 10))
 
@@ -552,7 +552,7 @@ for r in rows:
         f"P{r['i'] + 1}", f"{r['d0'][5:]} to {r['d1'][5:]}",
         f"{p.describe()}<br/><font color='{INK2}'>mom {p.momentum:+.2f}, vol {p.volatility:.2f}</font>",
         r["sec"], r["tx"], str(r["motif"]), str(r["n_mel"]), str(r["bass_n"]),
-        f"{'+'.join(ROMAN[d % 7] for d in r['chord'])}<br/><font color='{INK2}'>{r['colour']}</font>",
+        f"{'-'.join(ROMAN[d % 7] for d in r['chord'])}<br/><font color='{INK2}'>{r['colour']}</font>",
         str(r["vel"]),
     ])
 story.append(table(data, [w * inch for w in (0.42, 0.8, 1.32, 0.42, 1.0, 0.95, 0.47, 0.47, 0.62, 0.38)]))
@@ -597,8 +597,10 @@ story.append(P("Step 6. The finished score", H1))
 story.append(P(
     "Each phrase is rendered in three voices, like a pianist's two hands plus sustain: the "
     "<b>melody</b> plays the (transformed) motif on the phrase's rhythm, nudged by the price "
-    "contour; the <b>harmony</b> holds the phrase's chord; the <b>bass</b> runs a minimalist "
-    "broken-chord ostinato in the style of Philip Glass. After the last phrase, a final "
+    "contour; the <b>harmony</b> holds the phrase's chords in turn (a two-chord step such as "
+    "I-V gives each chord half the phrase); the <b>bass</b> runs a minimalist broken-chord "
+    "ostinato in the style of Philip Glass, following whichever chord is sounding. After the "
+    "last phrase, a final "
     "tonic chord across three registers brings the piece home."))
 story.append(figure(fig_pianoroll(), "Figure 5. Piano-roll view of the generated MIDI. Time runs left to right in beats "
     "(8 beats per phrase); height is pitch. Note how the melody drops in P7, how bass and "
