@@ -187,6 +187,7 @@ def compose(req: ComposeRequest):
         volume=series.volume,
         symbol=req.symbol,
         n_phrases=req.n_phrases,
+        open_=series.open,
     )
 
     # 3) COMPOSITION ---------------------------------------------------------

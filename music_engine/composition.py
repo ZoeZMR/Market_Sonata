@@ -365,6 +365,10 @@ class Composer:
         # layers/activity, per the mapping spec).
         self._render_bass(score, phrase, root_degrees[0], start, beats)
 
+        # 4) GAP — an overnight shock lands as a sforzando accent ---------
+        if phrase.gap:
+            self._render_gap(score, phrase, start + phrase.gap_pos * beats)
+
     def _render_bass(
         self,
         score: Score,
@@ -384,6 +388,23 @@ class Composer:
             pitch = self._degree_to_pitch(deg, octave_shift=-2)
             vel = self._velocity(phrase, accent=0.5)
             score.add(Note(pitch, start + i * step, step * 0.9, vel, "bass"))
+
+    def _render_gap(self, score: Score, phrase: PhraseFeatures,
+                    t: float) -> None:
+        """
+        A gap is the market skipping prices entirely, so the music skips too:
+        a short, loud octave far outside the phrase's register. Gap up -> a
+        bright tonic+5th stab up high; gap down -> a low tonic octave thud.
+        Bigger gaps hit harder (a 5% gap is already near full force).
+        """
+        vel = int(np.clip(100 + 400 * abs(phrase.gap), 100, 127))
+        if phrase.gap > 0:
+            voice, degrees, shift = "melody", [0, 4, 7], 2
+        else:
+            voice, degrees, shift = "bass", [0, 7], -3
+        for d in degrees:
+            score.add(Note(self._degree_to_pitch(d, octave_shift=shift),
+                           t, 0.5, vel, voice))
 
     def _render_cadence(self, score: Score, start: float,
                         last_phrase: PhraseFeatures) -> None:

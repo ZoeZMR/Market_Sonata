@@ -25,7 +25,7 @@ and develop.
 from __future__ import annotations
 
 from dataclasses import dataclass, field, asdict
-from typing import List, Dict, Any
+from typing import List, Dict, Any, Optional
 
 import numpy as np
 
@@ -46,6 +46,10 @@ class PhraseFeatures:
     volatility: float          # tension level, [0, 1]
     volume: float              # participation / dynamics, [0, 1]
     brightness: float          # local trend colour, [-1, 1] (bear..bull)
+    # Largest opening gap in the phrase (open vs. previous close), signed.
+    # 0.0 when nothing jumped far enough to count as a shock.
+    gap: float = 0.0
+    gap_pos: float = 0.0       # where in the phrase it happened, [0, 1)
 
     def describe(self) -> str:
         """Plain-language tag used by the AI analyst."""
@@ -131,6 +135,7 @@ def extract_features(
     volume: List[float],
     symbol: str,
     n_phrases: int = 12,
+    open_: Optional[List[float]] = None,
 ) -> MarketFeatures:
     """
     Convert raw market series into a composer-ready `MarketFeatures` object.
@@ -142,6 +147,8 @@ def extract_features(
     volume  : trading volume aligned with `dates`.
     symbol  : the ticker, e.g. "AAPL".
     n_phrases : how many musical phrases to carve the timeline into.
+    open_   : optional session opens aligned with `close`; enables gap
+              detection (overnight shocks become sforzando accents).
 
     The number of phrases is the "resolution" of the composition. Twelve is a
     good default: enough for an ABA form with development, few enough that each
@@ -177,6 +184,15 @@ def extract_features(
     running_max = np.maximum.accumulate(close_arr)
     drawdowns = (running_max - close_arr) / running_max
     max_drawdown = float(np.nanmax(drawdowns))
+
+    # Opening gaps: how far each session opened from the previous close.
+    # Only moves beyond 2.5x the typical daily move count as a shock, so the
+    # accents stay rare enough to be heard as events.
+    gaps = np.zeros(n)
+    if open_ is not None and len(open_) == n:
+        open_arr = np.asarray(open_, dtype=float)
+        gaps[1:] = open_arr[1:] / close_arr[:-1] - 1.0
+        gaps[np.abs(gaps) < max(raw_vol * 2.5, 0.01)] = 0.0
 
     # --- Per-phrase descriptors -------------------------------------------
     chunks = np.array_split(np.arange(n), n_phrases)
@@ -216,6 +232,9 @@ def extract_features(
         # a consistent emotional home key even as phrases vary.
         brightness = float(np.clip(0.6 * momentum + 0.4 * trend, -1.0, 1.0))
 
+        seg_gaps = gaps[idx]
+        k = int(np.argmax(np.abs(seg_gaps)))
+
         phrases.append(
             PhraseFeatures(
                 index=i,
@@ -224,6 +243,8 @@ def extract_features(
                 volatility=float(volatility),
                 volume=float(volume_level),
                 brightness=brightness,
+                gap=float(seg_gaps[k]),
+                gap_pos=k / idx.size,
             )
         )
 

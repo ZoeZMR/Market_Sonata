@@ -13,7 +13,7 @@ useful property for a portfolio piece being shown live.
 
 from __future__ import annotations
 
-from dataclasses import dataclass, asdict
+from dataclasses import dataclass, asdict, field
 from typing import List, Dict, Any, Tuple
 import datetime as dt
 import json
@@ -51,6 +51,9 @@ class MarketSeries:
     # fallback can never be mistaken for real market data.
     note: str = ""
     currency: str = ""
+    # Session opens, aligned with `close`. Empty when the source lacks them
+    # (synthetic data), in which case no gaps are detected.
+    open: List[float] = field(default_factory=list)
 
     def to_dict(self) -> Dict[str, Any]:
         return asdict(self)
@@ -85,7 +88,7 @@ def _epoch(iso: str, fallback: dt.date) -> int:
                            tzinfo=dt.timezone.utc).timestamp())
 
 
-def _yahoo_chart(symbol: str, start: str, end: str) -> Tuple[List[str], np.ndarray, np.ndarray, str]:
+def _yahoo_chart(symbol: str, start: str, end: str) -> Tuple[List[str], np.ndarray, np.ndarray, np.ndarray, str]:
     """
     Call Yahoo's public chart endpoint directly.
 
@@ -124,6 +127,7 @@ def _yahoo_chart(symbol: str, start: str, end: str) -> Tuple[List[str], np.ndarr
     quote = ((res.get("indicators") or {}).get("quote") or [{}])[0]
     closes = quote.get("close") or []
     volumes = quote.get("volume") or []
+    opens = quote.get("open") or []
     if not stamps or not closes:
         raise ValueError("empty series")
 
@@ -131,22 +135,25 @@ def _yahoo_chart(symbol: str, start: str, end: str) -> Tuple[List[str], np.ndarr
     # the date label matches the row on the Yahoo website.
     offset = int(meta.get("gmtoffset") or 0)
 
-    dates, close, volume = [], [], []
+    dates, close, volume, open_ = [], [], [], []
     for i, ts in enumerate(stamps):
         c = closes[i] if i < len(closes) else None
         if c is None:                        # holidays / halted sessions
             continue
         v = volumes[i] if i < len(volumes) else None
+        o = opens[i] if i < len(opens) else None
         day = dt.datetime.fromtimestamp(ts + offset, tz=dt.timezone.utc).date()
         dates.append(day.isoformat())
         close.append(float(c))
         volume.append(float(v or 0.0))
+        open_.append(float(o if o is not None else c))
 
     if not close:
         raise ValueError("no priced sessions in that range")
 
     return (dates, np.asarray(close, dtype=float),
-            np.asarray(volume, dtype=float), str(meta.get("currency") or ""))
+            np.asarray(volume, dtype=float), np.asarray(open_, dtype=float),
+            str(meta.get("currency") or ""))
 
 
 def _yfinance_chart(symbol: str, start: str, end: str):
@@ -166,18 +173,22 @@ def _yfinance_chart(symbol: str, start: str, end: str):
 
     close_series = df["Close"]
     vol_series = df["Volume"]
+    open_series = df["Open"]
     # yfinance can return multi-index columns for single tickers.
     if hasattr(close_series, "columns"):
         close_series = close_series.iloc[:, 0]
         vol_series = vol_series.iloc[:, 0]
+        open_series = open_series.iloc[:, 0]
 
     close_series = close_series.dropna()
     vol_series = vol_series.reindex(close_series.index).fillna(0.0)
+    open_series = open_series.reindex(close_series.index).fillna(close_series)
 
     dates = [d.strftime("%Y-%m-%d") for d in close_series.index]
     return (dates,
             np.asarray(close_series.values, dtype=float),
-            np.asarray(vol_series.values, dtype=float))
+            np.asarray(vol_series.values, dtype=float),
+            np.asarray(open_series.values, dtype=float))
 
 
 def fetch_market_data(symbol: str, start: str, end: str) -> MarketSeries:
@@ -193,10 +204,10 @@ def fetch_market_data(symbol: str, start: str, end: str) -> MarketSeries:
     problems: List[str] = []
 
     try:
-        dates, close, volume, currency = _yahoo_chart(symbol, start, end)
+        dates, close, volume, open_, currency = _yahoo_chart(symbol, start, end)
         return MarketSeries(
             symbol=symbol, dates=dates,
-            close=close.tolist(), volume=volume.tolist(),
+            close=close.tolist(), volume=volume.tolist(), open=open_.tolist(),
             returns=_returns(close), volatility=_rolling_volatility(close),
             source="yahoo", currency=currency,
             note="Unadjusted daily closes from Yahoo Finance.",
@@ -205,10 +216,10 @@ def fetch_market_data(symbol: str, start: str, end: str) -> MarketSeries:
         problems.append(f"yahoo: {type(exc).__name__}: {exc}")
 
     try:
-        dates, close, volume = _yfinance_chart(symbol, start, end)
+        dates, close, volume, open_ = _yfinance_chart(symbol, start, end)
         return MarketSeries(
             symbol=symbol, dates=dates,
-            close=close.tolist(), volume=volume.tolist(),
+            close=close.tolist(), volume=volume.tolist(), open=open_.tolist(),
             returns=_returns(close), volatility=_rolling_volatility(close),
             source="yfinance",
             note="Unadjusted daily closes via yfinance.",

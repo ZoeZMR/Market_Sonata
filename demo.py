@@ -26,7 +26,8 @@ def main() -> None:
     series = fetch_market_data(symbol, start, end)
     print(f"  {len(series.close)} data points  (source: {series.source})")
 
-    features = extract_features(series.dates, series.close, series.volume, symbol)
+    features = extract_features(series.dates, series.close, series.volume, symbol,
+                                open_=series.open)
     score = Composer(features).compose()
 
     os.makedirs("output", exist_ok=True)
