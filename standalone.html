@@ -6,10 +6,9 @@
 <title>Market Sonata</title>
 <link rel="preconnect" href="https://fonts.googleapis.com" />
 <link href="https://fonts.googleapis.com/css2?family=Instrument+Serif:ital@0;1&family=Cormorant+Garamond:ital,wght@0,400;0,600;1,400;1,600&family=Inter:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;600&display=swap" rel="stylesheet" />
-<!-- Tone.js for in-browser playback, Plotly (finance bundle: candlesticks) for charts, VexFlow for the sheet-music view -->
+<!-- Tone.js for in-browser playback, Plotly (finance bundle: candlesticks) for charts -->
 <script src="https://cdnjs.cloudflare.com/ajax/libs/tone/15.0.4/Tone.js"></script>
 <script src="https://cdn.plot.ly/plotly-finance-2.35.2.min.js"></script>
-<script src="https://cdnjs.cloudflare.com/ajax/libs/vexflow/4.2.2/vexflow-min.js"></script>
 <script>
   // Resolve the theme BEFORE first paint so a light-mode visitor never sees a
   // dark flash. Precedence: ?theme= in the URL > saved choice > system setting.
@@ -187,7 +186,8 @@
     background:linear-gradient(160deg,var(--card-hi),var(--card)); box-shadow:var(--shadow); min-height:380px; }
   #stageCv { position:absolute; inset:0; width:100%; height:100%; display:block; border-radius:0; cursor:default; }
   .stage-in { position:relative; z-index:2; padding:28px 30px 24px; display:flex; flex-direction:column; gap:16px; min-height:380px; pointer-events:none; }
-  .stage-in > * { pointer-events:auto; }
+  .stage-in * { pointer-events:none; }
+  .stage-in button, .stage-in a, .stage-in input, .stage-in .tag { pointer-events:auto; }
   .stage-top { display:flex; justify-content:space-between; gap:20px; flex-wrap:wrap; align-items:flex-start; }
   .asset-sym { font-size:clamp(44px,7vw,84px); line-height:.95; margin:4px 0 0; font-weight:600; letter-spacing:-.01em; }
   .asset-name { font-size:15px; color:var(--mist); margin-top:6px; }
@@ -267,9 +267,6 @@
   .plot { width:100%; }
   .chart-tabs { margin-bottom:8px; }
   .charthint { font-size:10px; color:var(--faint); margin:6px 0 0; }
-  .sheet-wrap { overflow-x:auto; background:var(--roll-bg); border:1px solid var(--line);
-    border-radius:14px; padding:10px 4px; }
-  .sheet-wrap svg { display:block; }
   .stats { display:grid; grid-template-columns:repeat(3,1fr); gap:10px; margin-top:16px; }
   @media (max-width: 600px){ .stats{ grid-template-columns:1fr 1fr; } }
   .stat { background:var(--card-2); border:1px solid var(--line); border-radius:14px; padding:10px 12px; }
@@ -417,6 +414,80 @@
   .foot-cols a, .foot-cols span { display:block; font-size:13px; color:var(--ink); text-decoration:none; margin-bottom:8px; }
   .foot-cols a:hover { color:var(--gold-ink); }
   .site-foot { text-align:left; }
+
+  /* ---------- clickable stage ---------- */
+  .stage.touchable { cursor:crosshair; }
+  .stage-tip { position:absolute; z-index:5; pointer-events:none; transform:translate(-50%,calc(-100% - 14px));
+    background:var(--card-hi); border:1px solid var(--line-2); border-radius:12px; padding:8px 12px; font-size:12px;
+    white-space:nowrap; box-shadow:var(--shadow); backdrop-filter:blur(10px); }
+  .stage-tip b { color:var(--gold-ink); }
+  .stage-tip .go { display:block; font-size:10px; letter-spacing:.14em; text-transform:uppercase; color:var(--mist); margin-top:3px; }
+  .form-strip { display:flex; gap:4px; margin-top:4px; }
+  .form-strip button { flex:1 1 0; min-width:0; font-family:inherit; font-size:10px; letter-spacing:.12em; text-transform:uppercase;
+    color:var(--mist); background:var(--card-2); border:1px solid var(--line); border-radius:10px; padding:8px 4px; cursor:pointer;
+    white-space:nowrap; overflow:hidden; text-overflow:ellipsis; backdrop-filter:blur(6px); position:relative; transition:all .15s; }
+  .form-strip button:hover { color:var(--ink); border-color:var(--gold); transform:translateY(-1px); }
+  .form-strip button.on { color:var(--on-gold); background:var(--gold); border-color:var(--gold); font-weight:600; }
+  .form-strip button .t { display:block; font-family:"JetBrains Mono",monospace; font-size:9px; letter-spacing:0; opacity:.7; margin-top:2px; }
+
+  /* ---------- tile sound preview ---------- */
+  .tile { cursor:pointer; }
+  .t-play { width:26px; height:26px; border-radius:50%; border:1px solid var(--line-2); background:var(--card); color:var(--mist);
+    font-size:12px; cursor:pointer; display:grid; place-items:center; flex:0 0 auto; transition:all .15s; }
+  .t-play:hover { color:var(--on-gold); background:var(--gold); border-color:var(--gold); transform:scale(1.1); }
+  .tile.previewing { border-color:var(--gold); box-shadow:0 0 0 1px var(--gold) inset, 0 0 24px color-mix(in srgb,var(--gold) 30%,transparent); }
+  .tile.previewing .t-play { background:var(--gold); color:var(--on-gold); animation:pulse 0.6s ease-in-out infinite; }
+  .tile .t-right { display:flex; align-items:center; gap:8px; }
+
+  /* ---------- game ---------- */
+  .game-hud { display:flex; gap:12px; flex-wrap:wrap; margin-bottom:18px; }
+  .hud { flex:1 1 110px; background:var(--card-2); border:1px solid var(--line); border-radius:16px; padding:10px 14px; }
+  .hud span { display:block; font-size:10px; letter-spacing:.2em; text-transform:uppercase; color:var(--mist); }
+  .hud b { font-family:var(--serif); font-weight:400; font-size:34px; line-height:1.1; font-variant-numeric:tabular-nums; }
+  .hud b.bump { animation:bump .5s ease; color:var(--gold-ink); }
+  @keyframes bump { 40% { transform:scale(1.25); } }
+  .g-intro { display:grid; grid-template-columns:1.2fr 1fr; gap:28px; align-items:center; }
+  @media (max-width: 800px){ .g-intro{ grid-template-columns:1fr; } }
+  .g-rules { counter-reset:r; list-style:none; padding:0; margin:0 0 22px; }
+  .g-rules li { counter-increment:r; position:relative; padding:12px 0 12px 46px; border-top:1px solid var(--line); color:var(--mist); line-height:1.55; }
+  .g-rules li::before { content:counter(r); position:absolute; left:0; top:10px; width:30px; height:30px; border-radius:50%;
+    display:grid; place-items:center; font-family:var(--serif); font-size:18px; color:var(--gold-ink); border:1px solid var(--gold); }
+  .g-rules b { color:var(--ink); }
+  .g-demo { display:grid; grid-template-columns:repeat(3,1fr); gap:10px; }
+  .g-demo div { aspect-ratio:4/3; border-radius:14px; border:1px dashed var(--line-2); display:grid; place-items:center; color:var(--faint);
+    font-family:var(--serif); font-size:34px; }
+  .g-player { display:flex; align-items:center; gap:16px; flex-wrap:wrap; padding:14px 16px; border-radius:18px; background:var(--card-2); border:1px solid var(--line); }
+  .g-player .btn-play { width:52px; height:52px; font-size:18px; }
+  .g-prog { flex:1 1 200px; }
+  .g-prog .bar { height:6px; border-radius:999px; background:var(--line-2); overflow:hidden; }
+  .g-prog .bar i { display:block; height:100%; width:0; background:linear-gradient(90deg,var(--violet),var(--gold)); }
+  .g-prog .meta { display:flex; justify-content:space-between; font-size:11px; color:var(--mist); margin-top:6px; }
+  .g-bonus { font-family:"JetBrains Mono",monospace; font-size:12px; color:var(--good); white-space:nowrap; }
+  .g-ask { font-size:14px; color:var(--mist); margin:20px 0 12px; }
+  .g-ask b { color:var(--ink); }
+  .g-cards { display:grid; grid-template-columns:repeat(3,1fr); gap:14px; }
+  @media (max-width: 760px){ .g-cards{ grid-template-columns:1fr; } }
+  .g-card { font-family:inherit; color:var(--ink); text-align:left; cursor:pointer; background:var(--card-2); border:1px solid var(--line-2);
+    border-radius:20px; padding:14px 14px 12px; transition:transform .2s, border-color .2s, box-shadow .2s; position:relative; }
+  .g-card:hover:not(:disabled) { transform:translateY(-4px); border-color:var(--gold); box-shadow:0 14px 34px color-mix(in srgb,var(--gold) 18%,transparent); }
+  .g-card:disabled { cursor:default; }
+  .g-card .lt { font-family:var(--serif); font-size:28px; line-height:1; color:var(--gold-ink); }
+  .g-card svg { width:100%; height:120px; display:block; margin:8px 0 6px; }
+  .g-card .who { font-size:12px; color:var(--mist); min-height:34px; }
+  .g-card .who b { color:var(--ink); font-size:14px; }
+  .g-card.right { border-color:var(--good); box-shadow:0 0 0 2px var(--good) inset; }
+  .g-card.wrong { border-color:var(--bad); box-shadow:0 0 0 2px var(--bad) inset; opacity:.85; }
+  .g-card .badge-r { position:absolute; top:12px; right:14px; font-size:11px; font-weight:700; letter-spacing:.1em; text-transform:uppercase; }
+  .g-result { margin-top:18px; padding:16px 18px; border-radius:18px; border:1px solid var(--line-2); background:var(--card-2);
+    display:flex; gap:16px; align-items:center; flex-wrap:wrap; }
+  .g-result .big { font-family:var(--serif); font-size:40px; line-height:1; }
+  .g-result p { margin:0; flex:1 1 300px; color:var(--mist); line-height:1.6; font-size:14px; }
+  .g-result p b { color:var(--ink); }
+  .g-final { text-align:center; padding:18px 0 6px; }
+  .g-final .big { font-family:var(--serif); font-size:clamp(64px,10vw,120px); line-height:1; }
+  .g-dots { display:flex; justify-content:center; gap:8px; margin:14px 0 22px; }
+  .g-dots i { width:14px; height:14px; border-radius:50%; background:var(--line-2); }
+  .g-dots i.ok { background:var(--good); } .g-dots i.no { background:var(--bad); }
 </style>
 </head>
 <body>
@@ -434,7 +505,7 @@
       <span class="logo">Market <em>Sonata</em></span>
     </a>
     <nav class="nav" id="nav" aria-label="Sections">
-      <a href="#listen">Listen</a><a href="#explore">Explore</a><a href="#score">Score</a><a href="#story">Story</a><a href="#how">How it works</a>
+      <a href="#listen">Listen</a><a href="#explore">Explore</a><a href="#score">Score</a><a href="#story">Story</a><a href="#play">Play</a><a href="#how">How it works</a>
     </nav>
     <div class="symbol-wrap">
       <svg class="ico" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" aria-hidden="true"><circle cx="11" cy="11" r="7"/><path d="M20 20l-3.5-3.5"/></svg>
@@ -444,7 +515,7 @@
       <div class="search-drop" id="searchDrop" style="display:none"></div>
     </div>
     <div class="hdr-right">
-      <span class="tag" id="pointsTag" title="Predict the next chapter to earn points" style="border-color:var(--gold);color:var(--gold-ink)">🎯 0 pts</span>
+      <a class="tag" id="pointsTag" href="#play" title="Your best score in Name that chart" style="border-color:var(--gold);color:var(--gold-ink);text-decoration:none">🎯 best 0</a>
       <div class="seg" id="themeSeg" role="group" aria-label="Colour theme">
         <button type="button" data-theme-choice="auto"  title="Follow the system setting">Auto</button>
         <button type="button" data-theme-choice="light" title="Light theme">☀</button>
@@ -512,7 +583,9 @@
             <button class="primary" id="composeBtn">Compose Sonata</button>
           </div>
         </div>
+        <div class="form-strip" id="formStrip" aria-label="Song sections — click to jump"></div>
       </div>
+      <div class="stage-tip" id="stageTip" hidden></div>
     </div>
 
     <div class="card deck reveal">
@@ -636,7 +709,7 @@
         <p class="charthint">click or drag the roll to seek · space plays / stops · MIDI always holds the full score</p>
       </div>
 
-      <div class="card" id="chartsCard" style="display:none">
+      <div class="card full" id="chartsCard" style="display:none">
         <div class="card-hd">
           <div>
             <div class="eyebrow">The source</div>
@@ -653,19 +726,6 @@
         <p class="charthint">hover for values · drag or scroll to zoom · double-click to reset</p>
       </div>
 
-      <div class="card" id="sheetCard" style="display:none">
-        <div class="card-hd">
-          <div>
-            <div class="eyebrow">Notation</div>
-            <h3 class="h3">Sheet music</h3>
-          </div>
-          <button class="btn-ghost" id="sheetPngBtn">↓ PNG</button>
-        </div>
-        <p class="charthint" style="margin:0 0 10px">
-          lead melody, with chord symbols read off the accompaniment · quantized to the nearest sixteenth note
-        </p>
-        <div class="sheet-wrap" id="sheetWrap"></div>
-      </div>
     </div>
   </section>
 
@@ -710,22 +770,27 @@
         <div class="stats" id="statsBox"></div>
       </div>
 
-      <div class="card full" id="predictCard" style="display:none">
-        <div class="card-hd">
-          <div>
-            <div class="eyebrow">Game</div>
-            <h3 class="h3">Predict the next chapter</h3>
-          </div>
-          <span class="tag" id="predictTag">—</span>
-        </div>
-        <div id="predictBody"></div>
-      </div>
     </div>
   </section>
 
-  <!-- ======================= 05 HOW ======================= -->
+  <!-- ======================= 05 PLAY ======================= -->
+  <section class="sec" id="play">
+    <div class="sec-hd reveal"><span class="num">05</span><div><div class="eyebrow">Game</div><h2 class="h2">Name that chart</h2></div>
+      <p class="sec-sub">A mystery song plays. Three real price charts appear — only one of them wrote the song. Trust your ears and click it.</p></div>
+    <div class="card game reveal" id="game">
+      <div class="game-hud">
+        <div class="hud"><span>Round</span><b id="gRound">–</b></div>
+        <div class="hud"><span>Score</span><b id="gScore">0</b></div>
+        <div class="hud"><span>Streak</span><b id="gStreak">0</b></div>
+        <div class="hud"><span>Best</span><b id="gBest">0</b></div>
+      </div>
+      <div id="gBody"></div>
+    </div>
+  </section>
+
+  <!-- ======================= 06 HOW ======================= -->
   <section class="sec" id="how">
-    <div class="sec-hd reveal"><span class="num">05</span><div><div class="eyebrow">Method</div><h2 class="h2">How a chart becomes a song</h2></div></div>
+    <div class="sec-hd reveal"><span class="num">06</span><div><div class="eyebrow">Method</div><h2 class="h2">How a chart becomes a song</h2></div></div>
     <div class="steps">
       <div class="step reveal"><span class="step-n">i</span><h4>Read the market</h4><p>Daily, hourly or monthly bars from Yahoo Finance are cut into twelve chapters. Each chapter gets a shape, a momentum, a volatility and a level of participation.</p></div>
       <div class="step reveal"><span class="step-n">ii</span><h4>Find the mood</h4><p>The overall trend chooses the modal family — bright, dark or ambiguous. Volatility sets the tempo and how dissonant the chords get; volume sets how hard the band plays.</p></div>
@@ -754,7 +819,7 @@
       <p class="mist">Every market becomes a song. Art, not investment advice.</p>
     </div>
     <div class="foot-cols">
-      <div><h5>Listen</h5><a href="#listen">Player</a><a href="#score">Score & sheet music</a><a href="#story">Programme note</a></div>
+      <div><h5>Listen</h5><a href="#listen">Player</a><a href="#score">Score & charts</a><a href="#play">Name that chart</a><a href="#story">Programme note</a></div>
       <div><h5>Explore</h5><a href="#explore">All markets</a><a href="#explore">Live movers</a><a href="#explore">Collections</a></div>
       <div><h5>Data</h5><span class="mist">Yahoo Finance</span><span class="mist">Notes by Claude</span></div>
     </div>
@@ -1527,207 +1592,6 @@ function drawRoll(){
   ctx.globalAlpha=1;ctx.fillStyle=css("--playhead");ctx.fillRect(rollProgress*w,0,2,h);
 }
 
-/* ---------- sheet music: the lead melody as real staff notation (VexFlow) ----------
-   The engine's notes are performance data (arbitrary-length beats, meant for
-   Tone.js), not notation — so this quantizes the melody to a 16th-note grid,
-   fills silence with rests, ties notes that don't fit a standard duration or
-   that cross a barline, and reads chord symbols straight off the pad voice
-   (which always strikes the bar's chord on beat 1) rather than reaching back
-   into the composer's internals. Purely additive: the audio engine, the piano
-   roll and the MIDI export are untouched.                                    */
-const SHEET_NOTE_NAMES=["c","c#","d","d#","e","f","f#","g","g#","a","a#","b"];
-const SHEET_GRID=0.25;          // sixteenth note, in beats
-const SHEET_CELLS_PER_BAR=16;   // 4/4 at a 16th-note grid
-// Greedy decomposition of a run of N grid cells into notatable durations
-// (16th-note units): whole, dotted-half, half, dotted-quarter, quarter,
-// dotted-8th, 8th, 16th — largest first, so a plain 4-cell run is one quarter
-// note rather than four tied sixteenths.
-const SHEET_DUR_CELLS=[[16,"w"],[12,"hd"],[8,"h"],[6,"qd"],[4,"q"],[3,"8d"],[2,"8"],[1,"16"]];
-function sheetSplitRun(cells){
-  const out=[];
-  while(cells>0){
-    const [n,code]=SHEET_DUR_CELLS.find(([n])=>n<=cells);
-    out.push(code); cells-=n;
-  }
-  return out;
-}
-function sheetPitchName(midi){
-  const pc=((midi%12)+12)%12, name=SHEET_NOTE_NAMES[pc], oct=Math.floor(midi/12)-1;
-  return {key:`${name}/${oct}`, letterOct:name[0]+oct, sharp:name.length>1};
-}
-// Best-effort chord symbol from the pad voice's simultaneous pitches at a bar's
-// downbeat, named against the bass voice's root — a label, not a claim that
-// every mode reduces cleanly to standard triads.
-function sheetChordAt(notes,bar){
-  const eps=1e-6;
-  const bassNs=notes.filter(n=>n.voice==="bass"&&n.start>=bar-eps&&n.start<bar+4-eps);
-  if(!bassNs.length)return null;
-  const rootPc=((bassNs.reduce((a,b)=>a.start<=b.start?a:b).pitch%12)+12)%12;
-  const padPcs=[...new Set(notes.filter(n=>n.voice==="pad"&&Math.abs(n.start-bar)<eps).map(n=>((n.pitch%12)+12)%12))];
-  if(!padPcs.length)return NOTE_NAMES[rootPc];
-  const ivs=new Set(padPcs.map(pc=>((pc-rootPc)%12+12)%12));
-  const has=x=>ivs.has(x);
-  let q="";
-  if(has(3)&&has(6)&&!has(7))q="dim";
-  else if(has(4)&&has(8)&&!has(7))q="aug";
-  else if(has(3)&&has(7))q="m";
-  else if(has(2)&&has(7)&&!has(3)&&!has(4))q="sus2";
-  else if(has(5)&&has(7)&&!has(3)&&!has(4))q="sus4";
-  if(has(10))q+="7"; else if(has(11)&&q==="")q="maj7";
-  return NOTE_NAMES[rootPc]+q;
-}
-function renderSheetMusic(score){
-  const wrap=$("sheetWrap");
-  wrap.innerHTML="";
-  if(typeof Vex==="undefined"){ wrap.innerHTML='<p class="badge">notation library unavailable</p>'; return; }
-  const VF=Vex.Flow;
-  const totalBars=Math.max(1,Math.ceil((score.totalBeats-1e-6)/4));
-  const totalCells=totalBars*SHEET_CELLS_PER_BAR;
-
-  // ---- lay the melody onto a 16th-note grid: cell -> {pitch,onset} | null ----
-  const cellPitch=new Array(totalCells).fill(null);
-  const melody=score.notes.filter(n=>n.voice==="melody").sort((a,b)=>a.start-b.start);
-  // Drop the final-chorus octave doubling (a simultaneous copy a 12th higher,
-  // added purely to thicken the audio) so the sheet shows one melodic line.
-  const primary=[];
-  for(const n of melody){
-    const dup=primary.length&&Math.abs(primary[primary.length-1].start-n.start)<1e-6
-      &&Math.abs(primary[primary.length-1].pitch-n.pitch)===12;
-    if(!dup)primary.push(n);
-  }
-  primary.forEach((n,i)=>{
-    const startCell=Math.round(n.start/SHEET_GRID);
-    if(startCell>=totalCells)return;
-    const nextStart=i+1<primary.length?Math.round(primary[i+1].start/SHEET_GRID):totalCells;
-    const avail=Math.max(1,Math.min(nextStart,totalCells)-startCell);
-    const lenCells=Math.max(1,Math.min(Math.round(n.duration/SHEET_GRID),avail));
-    for(let c=startCell;c<startCell+lenCells;c++)cellPitch[c]={pitch:n.pitch,onset:c===startCell};
-  });
-
-  // ---- render, four bars per system ----
-  // The melody voice sits high (often several ledger lines above the staff —
-  // that register is a real, deterministic choice made from the ticker and
-  // market, not a rendering bug), so each system needs generous headroom
-  // above its stave for both the ledger lines and the two label rows.
-  const BARS_PER_LINE=4, BAR_W=210, FIRST_PAD=60, LINE_H=170, STAVE_PAD_TOP=64;
-  const lines=Math.ceil(totalBars/BARS_PER_LINE);
-  const width=FIRST_PAD+BARS_PER_LINE*BAR_W+20;
-  const renderer=new VF.Renderer(wrap,VF.Renderer.Backends.SVG);
-  renderer.resize(width,lines*LINE_H+40);
-  const ctx=renderer.getContext();
-  ctx.setFillStyle(css("--ink")); ctx.setStrokeStyle(css("--ink"));
-  const allTies=[];   // ties can span a barline, so these are drawn once at the end
-  let carryTie=null;  // the previous bar's last pitched StaveNote, for cross-bar ties
-
-  for(let line=0;line<lines;line++){
-    const barsHere=Math.min(BARS_PER_LINE,totalBars-line*BARS_PER_LINE);
-    let x=10, y=STAVE_PAD_TOP+line*LINE_H;
-    for(let bi=0;bi<barsHere;bi++){
-      const barIdx=line*BARS_PER_LINE+bi;
-      const bar=barIdx*4;
-      const isFirst=bi===0;
-      const w=isFirst?FIRST_PAD+BAR_W-10:BAR_W;
-      const stave=new VF.Stave(x,y,w);
-      if(isFirst){ stave.addClef("treble"); if(line===0)stave.addTimeSignature("4/4"); }
-      stave.setContext(ctx).draw();
-
-      // section label above the bar it starts on
-      const sec=score.sections.find(s=>Math.round(s.start/4)===barIdx);
-      if(sec){
-        ctx.save(); ctx.setFillStyle(css("--good")); ctx.setFont("Inter, sans-serif","10px","bold");
-        ctx.fillText(sec.name.toUpperCase(),x+(isFirst?38:6),y-58); ctx.restore();
-      }
-      // chord symbol above the bar
-      const chord=sheetChordAt(score.notes,bar);
-      if(chord){
-        ctx.save(); ctx.setFillStyle(css("--gold-ink")); ctx.setFont("Inter, sans-serif","12px","600");
-        ctx.fillText(chord,x+(isFirst?38:6),y-40); ctx.restore();
-      }
-
-      // ---- this bar's cells -> tied runs of notes/rests ----
-      const cells=cellPitch.slice(barIdx*16,barIdx*16+16);
-      const runs=[]; // {pitch|null, len, tiedFromPrev}
-      let i=0;
-      while(i<16){
-        const cell=cells[i];
-        const key=cell?cell.pitch:null;
-        let len=1;
-        while(i+len<16){
-          const nx=cells[i+len];
-          const nk=nx?nx.pitch:null;
-          if(nk!==key)break;
-          if(nx&&nx.onset)break; // a new onset always starts a fresh run
-          len++;
-        }
-        runs.push({pitch:key,len,tiedFromPrev:cell&&!cell.onset&&i===0});
-        i+=len;
-      }
-
-      const staveNotes=[];
-      const shown=new Map(); // accidental already shown this bar, per letter+octave
-      runs.forEach(run=>{
-        const durs=sheetSplitRun(run.len);
-        durs.forEach((code,di)=>{
-          let sn;
-          if(run.pitch===null){
-            sn=new VF.StaveNote({keys:["b/4"],duration:code+"r"});
-            carryTie=null;
-          } else {
-            const {key,letterOct,sharp}=sheetPitchName(run.pitch);
-            sn=new VF.StaveNote({keys:[key],duration:code});
-            if(sharp&&shown.get(letterOct)!==true){
-              sn.addModifier(0,new VF.Accidental("#")); shown.set(letterOct,true);
-            } else if(!sharp){
-              shown.set(letterOct,false);
-            }
-            if((di>0||(run.tiedFromPrev&&di===0))&&carryTie){
-              allTies.push({first:carryTie,last:sn});
-            }
-            carryTie=sn;
-          }
-          staveNotes.push(sn);
-        });
-      });
-
-      const voice=new VF.Voice({num_beats:4,beat_value:4}).setStrict(false);
-      voice.addTickables(staveNotes);
-      new VF.Formatter().joinVoices([voice]).format([voice],w-(isFirst?60:20));
-      voice.draw(ctx,stave);
-      VF.Beam.generateBeams(staveNotes.filter(n=>!n.isRest())).forEach(b=>b.setContext(ctx).draw());
-
-      x+=w;
-    }
-  }
-  allTies.forEach(({first,last})=>new VF.StaveTie({first_note:first,last_note:last}).setContext(ctx).draw());
-}
-function downloadSheetPng(){
-  const svg=$("sheetWrap").querySelector("svg");
-  if(!svg)return;
-  const xml=new XMLSerializer().serializeToString(svg);
-  const svgBlob=new Blob([xml],{type:"image/svg+xml;charset=utf-8"});
-  const url=URL.createObjectURL(svgBlob);
-  const img=new Image();
-  img.onload=()=>{
-    const w=+svg.getAttribute("width")||svg.clientWidth||900;
-    const h=+svg.getAttribute("height")||svg.clientHeight||200;
-    const scale=2; // crisper export than the on-screen SVG's CSS size
-    const cv=document.createElement("canvas"); cv.width=w*scale; cv.height=h*scale;
-    const cx=cv.getContext("2d");
-    cx.fillStyle=getComputedStyle(document.body).backgroundColor||"#fff";
-    cx.fillRect(0,0,cv.width,cv.height);
-    cx.scale(scale,scale); cx.drawImage(img,0,0);
-    URL.revokeObjectURL(url);
-    cv.toBlob(blob=>{
-      const a=document.createElement("a");
-      a.href=URL.createObjectURL(blob);
-      a.download=`${current?current.series.symbol:"sonata"}_sheet.png`;
-      a.click();
-      setTimeout(()=>URL.revokeObjectURL(a.href),2000);
-    });
-  };
-  img.src=url;
-}
-$("sheetPngBtn").onclick=downloadSheetPng;
 
 /* ---------- scrubbing: drag the bar, or click the roll ---------- */
 // Length of the piece in seconds, known as soon as it is composed.
@@ -1799,170 +1663,13 @@ $("rollCv").addEventListener("pointermove",e=>{
 $("rollCv").addEventListener("pointerup",endDrag);
 $("rollCv").addEventListener("pointercancel",endDrag);
 
-/* ===================== prediction game ===================== */
-// A lightweight, local-only game layered on top of the real engine: before
-// hearing what comes next, guess the shape of the SAME symbol's next ~5
-// trading days, then compare against what actually happens once that window
-// exists in the data. It never changes what the music itself does — it only
-// grades a guess against it. All state (points, pending/resolved guesses)
-// lives in this browser's localStorage; there are no accounts or a server.
-const POINTS_KEY = "ms-points";
-const PREDICTIONS_KEY = "ms-predictions";
-
-const PREDICT_CATS = [
-  {key:"direction",  label:"Direction",  points:20, options:[["down","Down"],["sideways","Sideways"],["up","Up"]]},
-  {key:"mode",       label:"Mode",       points:20, options:[["minor","Minor"],["ambiguous","Ambiguous"],["major","Major"]]},
-  {key:"volatility", label:"Volatility", points:20, options:[["low","Low"],["medium","Medium"],["high","High"]]},
-  {key:"dynamics",   label:"Dynamics",   points:20, options:[["quiet","Quiet"],["moderate","Moderate"],["full","Full"]]},
-];
-const PERFECT_BONUS = 20;   // all four correct in one round → 100 total
-
-// Bucket thresholds mirror the ones the engine itself already uses (see
-// extractFeatures/composer/analyze above), so "correct" always means the
-// guess matches what the music actually does — never an invented distinction.
-// Deliberately absent: the tonic (e.g. "C#"), which is fixed by the ticker's
-// fingerprint alone and never changes between windows, so it's not a
-// prediction about the market — see "Why two tickers don't sound the same".
-function bucketDirection(trend){ return trend>0.05?"up":trend<-0.05?"down":"sideways"; }
-function bucketMode(trend){ return trend>0.15?"major":trend<-0.15?"minor":"ambiguous"; }
-function bucketVolatility(v){ return v<0.34?"low":v<0.67?"medium":"high"; }
-function bucketDynamics(v){ return v<0.34?"quiet":v>0.66?"full":"moderate"; }
-function actualBuckets(feat){
-  return {direction:bucketDirection(feat.trend), mode:bucketMode(feat.trend),
-          volatility:bucketVolatility(feat.avgVol), dynamics:bucketDynamics(feat.avgVolume)};
-}
-function labelFor(cat,val){ const hit=cat.options.find(([v])=>v===val); return hit?hit[1]:val; }
 
 function loadJSON(key,fallback){ try{ const v=JSON.parse(localStorage.getItem(key)); return v==null?fallback:v; }catch(e){ return fallback; } }
 function saveJSON(key,val){ try{ localStorage.setItem(key,JSON.stringify(val)); }catch(e){} }
-function getPoints(){ return Number(loadJSON(POINTS_KEY,0))||0; }
-function addPoints(n){ const p=getPoints()+n; saveJSON(POINTS_KEY,p); updatePointsTag(); return p; }
-function updatePointsTag(){ $("pointsTag").textContent=`🎯 ${getPoints().toLocaleString()} pts`; }
-
-function addDaysISO(iso,n){ const d=new Date(iso+"T00:00:00Z"); d.setUTCDate(d.getUTCDate()+n); return d.toISOString().slice(0,10); }
-function nextWindow(lastDate){ const d=String(lastDate).slice(0,10); return {start:addDaysISO(d,1), end:addDaysISO(d,9)}; }
-function predictionKey(series){ return `${series.symbol}|${series.dates[series.dates.length-1]}`; }
-function currentPrediction(){ if(!current)return null; return loadJSON(PREDICTIONS_KEY,{})[predictionKey(current.series)]||null; }
-function savePrediction(entry){
-  const preds=loadJSON(PREDICTIONS_KEY,{});
-  preds[predictionKey(current.series)]=entry;
-  saveJSON(PREDICTIONS_KEY,preds);
-}
-
-function segGroupHTML(cat,selected){
-  return `<div style="margin-top:10px">
-    <label style="margin:0 0 4px">${cat.label} <span class="mist" style="text-transform:none;letter-spacing:0">· ${cat.points} pts</span></label>
-    <div class="seg" data-cat="${cat.key}">
-      ${cat.options.map(([v,l])=>`<button type="button" data-val="${v}" class="${v===selected?"on":""}">${l}</button>`).join("")}
-    </div>
-  </div>`;
-}
-
-function renderPredictForm(guess){
-  const body=$("predictBody");
-  body.innerHTML=`
-    <p class="mist" style="font-size:13px;font-weight:300;margin:0">
-      Before you hear it: guess what <b>${current.series.symbol}</b>'s next ~5 trading
-      days will sound like. Points come from whichever categories you get right —
-      no need to nail all four.
-    </p>
-    ${PREDICT_CATS.map(c=>segGroupHTML(c,guess[c.key])).join("")}
-    <button class="primary" id="lockPredictBtn" type="button">Lock In Prediction</button>
-  `;
-  body.querySelectorAll(".seg").forEach(seg=>{
-    seg.addEventListener("click",e=>{
-      const btn=e.target.closest("button[data-val]"); if(!btn)return;
-      guess[seg.dataset.cat]=btn.dataset.val;
-      [...seg.children].forEach(c=>c.classList.toggle("on",c===btn));
-    });
-  });
-  $("lockPredictBtn").onclick=()=>{
-    savePrediction({guess:{...guess}, lockedAt:new Date().toISOString(), resolved:false});
-    renderPredictCard();
-  };
-}
-
-function renderPredictResolved(entry){
-  const body=$("predictBody");
-  const rows=PREDICT_CATS.map(c=>{
-    const hit=entry.guess[c.key]===entry.actual[c.key];
-    return `<div class="stat"><div class="k">${c.label}</div>
-      <div class="v" style="color:${hit?"var(--good)":"inherit"}">
-        ${hit?"✓":"✗"} guessed ${labelFor(c,entry.guess[c.key])} · actual ${labelFor(c,entry.actual[c.key])}
-      </div></div>`;
-  }).join("");
-  body.innerHTML=`
-    <p class="mist" style="font-size:13px;font-weight:300;margin:0 0 10px">
-      The next chapter (${entry.windowStart} → ${entry.windowEnd}) is in. You scored
-      <span class="gold" style="font-weight:600">${entry.earned} pts</span>${entry.perfect?" — a perfect round! 🎉":""}.
-    </p>
-    <div class="stats" style="grid-template-columns:1fr">${rows}</div>
-    <button class="btn-ghost" id="hearNextBtn" type="button" style="margin-top:14px">▶ Compose this chapter</button>
-  `;
-  $("hearNextBtn").onclick=()=>{
-    $("symbol").value=current.series.symbol;
-    $("start").value=entry.windowStart;
-    $("end").value=entry.windowEnd;
-    doCompose();
-  };
-}
-
-async function renderPredictCard(){
-  if(!current)return;
-  $("predictCard").style.display="block";
-  const entry=currentPrediction();
-
-  if(!entry){
-    $("predictTag").textContent="make your guess";
-    renderPredictForm({direction:"sideways",mode:"ambiguous",volatility:"medium",dynamics:"moderate"});
-    return;
-  }
-  if(entry.resolved){
-    $("predictTag").textContent="resolved";
-    renderPredictResolved(entry);
-    return;
-  }
-
-  // Locked but not yet resolved — try to resolve it now. Since this reads
-  // historical data, if the window already happened the reveal is instant;
-  // otherwise it stays pending until the user comes back later.
-  $("predictTag").textContent="checking…";
-  $("predictBody").innerHTML=`<p class="mist" style="font-size:13px;font-weight:300">
-    Prediction locked. Checking whether ${current.series.symbol}'s next chapter has happened yet…
-  </p>`;
-  const {start,end}=nextWindow(current.series.dates[current.series.dates.length-1]);
-  const myToken=renderToken;
-  try{
-    const series=await fetchSeries(current.series.symbol,start,end);
-    if(myToken!==renderToken)return;   // a newer piece has since been composed
-    if(!series.close||series.close.length<2)throw new Error("not enough data yet");
-    const feat=extractFeatures(series,4);
-    const actual=actualBuckets(feat);
-    let earned=0;
-    PREDICT_CATS.forEach(c=>{ if(entry.guess[c.key]===actual[c.key])earned+=c.points; });
-    const perfect=PREDICT_CATS.every(c=>entry.guess[c.key]===actual[c.key]);
-    if(perfect)earned+=PERFECT_BONUS;
-    const resolved={...entry, resolved:true, actual, earned, perfect,
-      windowStart:series.dates[0], windowEnd:series.dates[series.dates.length-1]};
-    savePrediction(resolved);
-    addPoints(earned);
-    $("predictTag").textContent="resolved";
-    renderPredictResolved(resolved);
-  }catch(e){
-    if(myToken!==renderToken)return;
-    $("predictTag").textContent="pending";
-    $("predictBody").innerHTML=`<p class="mist" style="font-size:13px;font-weight:300">
-      Locked in: ${PREDICT_CATS.map(c=>`${c.label.toLowerCase()} = ${labelFor(c,entry.guess[c.key])}`).join(" · ")}.
-      ${current.series.symbol}'s next chapter (starting ${start}) hasn't happened yet, or the
-      market hasn't been open long enough since then — recompose this same range later to check again.
-    </p>`;
-  }
-}
-updatePointsTag();
 
 function render(){
   $("emptyState").style.display="none";
-  ["chartsCard","playerCard","sheetCard","analystCard","predictCard"].forEach(id=>$(id).style.display="block");
+  ["chartsCard","playerCard","analystCard"].forEach(id=>$(id).style.display="block");
   const {series,feat,score}=current;
   // data-source badge in the Analyst's Note
   const srcTag=$("srcTag");
@@ -1982,7 +1689,6 @@ function render(){
   $("secNow").textContent="";
   playDur=0; paintProgress(0);   // new piece: reset the scrub bar and its clock
   drawRoll();
-  renderSheetMusic(score);
 
   // analyst — render the grounded note immediately, then try to have Claude
   // polish its prose in the background (see polishAnalystNote).
@@ -2005,8 +1711,6 @@ function render(){
   midiUrl=URL.createObjectURL(blob);
   const a=$("dlBtn"); a.href=midiUrl; a.download=`${series.symbol}_song.mid`;
 
-  // prediction game — separate card, own async lifecycle (see renderPredictCard)
-  renderPredictCard();
 }
 
 // Build features + score + view from a series and store it as `current`.
@@ -2208,6 +1912,7 @@ function triggerNote(B,n,t,durS,v){
 
 async function playScore(){
   if(!current)return;
+  if(game.playing) gameStopAudio();   // one thing plays at a time
   await Tone.start(); const B=getBand(); ensureAnalyser();
   Tone.Transport.stop();Tone.Transport.cancel();
   const score=current.score; Tone.Transport.bpm.value=score.tempo;
@@ -2239,6 +1944,7 @@ async function playScore(){
   tick();
 }
 function stopPlayback(){
+  if(game.playing) gameAudioEnded();  // the transport is shared with the game
   playing=false;$("playBtn").textContent="▶"; $("playBtn").classList.remove("playing"); $("playBtn").setAttribute("aria-label","Play");
   try{Tone.Transport.stop();Tone.Transport.cancel();releaseAll();}catch(e){}
   if(rafId)cancelAnimationFrame(rafId);
@@ -2434,6 +2140,7 @@ function renderHero(){
   $("musicChips").innerHTML=chips.map(([k,v])=>`<span class="tag">${k} <b>${esc(v)}</b></span>`).join("");
   document.title=`${series.symbol} · Market Sonata`;
   rememberRecent(series.symbol, nm);
+  renderFormStrip();
 }
 
 /* ===================== the stage: price line + a visualizer that listens ===================== */
@@ -2518,6 +2225,20 @@ function drawStage(){
   ctx.strokeStyle=up?stageCol["--gold"]:stageCol["--violet"]; ctx.lineWidth=2.2; ctx.globalAlpha=0.9;
   ctx.beginPath(); pts.forEach((p,i)=>i?ctx.lineTo(p[0],p[1]):ctx.moveTo(p[0],p[1])); ctx.stroke();
   ctx.shadowBlur=0; ctx.globalAlpha=1;
+
+  // --- hover crosshair: what the pointer is over ---
+  if(current&&stageHover.x!=null){
+    const hx=stageHover.x*w;
+    let hy=pts[pts.length-1][1];
+    for(let i=1;i<pts.length;i++){ if(pts[i][0]>=hx){ const [x0,y0]=pts[i-1],[x1,y1]=pts[i]; hy=y0+(y1-y0)*((hx-x0)/Math.max(1e-9,x1-x0)); break; } }
+    stageHover.y=hy;
+    ctx.strokeStyle=stageCol["--mist"]; ctx.globalAlpha=.5; ctx.setLineDash([2,4]);
+    ctx.beginPath(); ctx.moveTo(hx,0); ctx.lineTo(hx,h); ctx.stroke(); ctx.setLineDash([]); ctx.globalAlpha=1;
+    ctx.fillStyle=stageCol["--gold"]; ctx.beginPath(); ctx.arc(hx,hy,5,0,Math.PI*2); ctx.fill();
+    ctx.strokeStyle="#fff"; ctx.lineWidth=1.5; ctx.stroke();
+    const tip=$("stageTip"); tip.style.left=hx+"px"; tip.style.top=hy+"px";
+  }
+  paintFormStripNow();
 
   // --- where the music is reading the market ---
   if(current&&(playing||rollProgress>0)){
@@ -2604,12 +2325,13 @@ function sparkSVG(closes,upc){
 function tileHTML(r){
   const c=r.change_pct, has=c!=null&&isFinite(c);
   const upc=has?c>=0:(r.closes&&r.closes.length>1?r.closes[r.closes.length-1]>=r.closes[0]:true);
-  return `<button class="tile${r.price==null?" skel":""}" data-symbol="${esc(r.symbol)}" title="${esc(r.name||r.symbol)}">
+  return `<div class="tile${r.price==null?" skel":""}" role="button" tabindex="0" data-symbol="${esc(r.symbol)}" title="Compose ${esc(r.name||r.symbol)}">
     <div class="t-top"><span class="t-sym">${esc(r.symbol)}</span>
-      <span class="t-chg mono ${has?(c>=0?"up":"down"):""}">${has?(c>=0?"+":"")+c.toFixed(2)+"%":"…"}</span></div>
+      <span class="t-right"><span class="t-chg mono ${has?(c>=0?"up":"down"):""}">${has?(c>=0?"+":"")+c.toFixed(2)+"%":"…"}</span>
+      <button type="button" class="t-play" aria-label="Hear a preview of ${esc(r.symbol)}" title="Hear last month as a melody">♪</button></span></div>
     <div class="t-name">${esc(r.name||nameCache[r.symbol]||"")}</div>
     <div class="t-bot"><span class="t-px mono">${r.price!=null?fmtNum(r.price):"—"}</span>${sparkSVG(r.closes,upc)}</div>
-  </button>`;
+  </div>`;
 }
 function paintTiles(){
   let rows=ex.rows.slice();
@@ -2621,7 +2343,13 @@ function paintTiles(){
   }
   $("tiles").innerHTML=rows.length?rows.map(tileHTML).join("")
     :`<div class="badge" style="grid-column:1/-1;padding:18px 4px">${ex.sub&&ex.sub.kind==="recent"?"Nothing composed yet — pick any market.":"No markets match."}</div>`;
-  $("tiles").querySelectorAll(".tile").forEach(t=>t.onclick=()=>pickSymbol(t.dataset.symbol));
+  $("tiles").querySelectorAll(".tile").forEach(t=>{
+    t.onclick=e=>{
+      if(e.target.closest(".t-play")){ const row=ex.rows.find(r=>r.symbol===t.dataset.symbol); previewMelody(t.dataset.symbol,row&&row.closes,t); return; }
+      pickSymbol(t.dataset.symbol);
+    };
+    t.onkeydown=e=>{ if((e.key==="Enter"||e.key===" ")&&e.target===t){ e.preventDefault(); pickSymbol(t.dataset.symbol); } };
+  });
   if(ex.sub&&ex.sub.kind==="universe"){
     const what={EQUITY:"stocks",ETF:"ETFs",MUTUALFUND:"mutual funds"}[uni.type];
     $("exCount").textContent=`${uni.total.toLocaleString()} ${what} · showing ${(uni.page*UNI_PAGE+1).toLocaleString()}–${(uni.page*UNI_PAGE+ex.rows.length).toLocaleString()}`;
@@ -2998,6 +2726,278 @@ document.querySelectorAll("[data-count]").forEach(el=>countObs.observe(el));
   }
   requestAnimationFrame(frame);
 })();
+
+/* ===================== touch the market: stage hover / click, form strip ===================== */
+// Hover the price line to see a date, its price and the part of the song that
+// plays it; click to play from there. The inverse of marketFracAt(): a point
+// on the market timeline maps to the section that reads it.
+const stageHover={x:null,y:null};
+function beatAtMarketFrac(frac){
+  const secs=current.score.sections;
+  for(let i=0;i<secs.length;i++){
+    if(FORM[i].kind==="outro") continue;
+    const a=FORM[i].at, b=i+1<FORM.length&&FORM[i+1].kind!=="outro"?FORM[i+1].at:1;
+    if(frac>=a&&(frac<b||b===1)) return {beat:secs[i].start+(secs[i].end-secs[i].start)*Math.min(0.999,(frac-a)/Math.max(1e-9,b-a)),sec:secs[i]};
+  }
+  return {beat:0,sec:secs[0]};
+}
+function stageFrac(e){ const r=$("stageCv").getBoundingClientRect(); return Math.max(0,Math.min(1,(e.clientX-r.left)/r.width)); }
+const onControl=e=>!!e.target.closest("button,a,input,select,.tag");
+$("stage").addEventListener("pointermove",e=>{
+  if(!current||onControl(e)){ stageHover.x=null; $("stageTip").hidden=true; return; }
+  const f=stageFrac(e), s=current.series, i=Math.round(f*(s.close.length-1));
+  const {beat,sec}=beatAtMarketFrac(f);
+  stageHover.x=f;
+  const tip=$("stageTip");
+  tip.innerHTML=`<b>${esc(fmtDate(s.dates[i]))}</b> · ${fmtNum(s.close[i])}${s.currency?" "+esc(s.currency):""}`
+    +`<span class="go">♪ ${esc(sec.name)} · ${fmtTime(beat*60/current.score.tempo)} — click to play from here</span>`;
+  tip.hidden=false;
+});
+$("stage").addEventListener("pointerleave",()=>{ stageHover.x=null; $("stageTip").hidden=true; });
+$("stage").addEventListener("click",e=>{
+  if(!current||onControl(e)) return;
+  const {beat}=beatAtMarketFrac(stageFrac(e));
+  jumpTo(beat);
+});
+function jumpTo(beat){
+  const frac=beat/current.score.totalBeats;
+  if(playing) seekTo(frac);
+  else { seekTo(frac); playScore(); }
+}
+// The song form as a row of buttons, each as wide as its section.
+function renderFormStrip(){
+  const {score}=current, strip=$("formStrip");
+  strip.innerHTML=score.sections.map((s,i)=>`<button type="button" data-i="${i}" style="flex-grow:${s.end-s.start}" title="Play from ${esc(s.name)}">${esc(s.name)}<span class="t">${fmtTime(s.start*60/score.tempo)}</span></button>`).join("");
+  strip.querySelectorAll("button").forEach(b=>b.onclick=()=>jumpTo(score.sections[+b.dataset.i].start+0.001));
+  $("stage").classList.add("touchable");
+}
+let stripOn=-1;
+function paintFormStripNow(){
+  if(!current) return;
+  let on=-1;
+  if(playing||rollProgress>0){
+    const beat=rollProgress*current.score.totalBeats;
+    on=current.score.sections.findIndex(s=>beat>=s.start&&beat<s.end);
+  }
+  if(on===stripOn) return;
+  stripOn=on;
+  $("formStrip").querySelectorAll("button").forEach((b,i)=>b.classList.toggle("on",i===on));
+}
+
+/* ===================== ♪ preview: a market's last month as a quick melody ===================== */
+// Twelve points of the tile's sparkline, sung in the ticker's own key — a
+// major pentatonic if the month went up, a minor one if it went down.
+let previewTimer=null;
+async function previewMelody(sym,closes,el){
+  if(!closes||closes.length<2){ el.classList.add("previewing"); setTimeout(()=>el.classList.remove("previewing"),400); return; }
+  try{ await Tone.start(); }catch(e){ return; }
+  const B=getBand();
+  const fp=fingerprint(sym), up=closes[closes.length-1]>=closes[0];
+  const scale=up?[0,2,4,7,9]:[0,3,5,7,10], root=48+fp.root;
+  const pts=resample(closes,12), lo=Math.min(...pts), hi=Math.max(...pts), rg=hi-lo||1;
+  const t0=Tone.now()+0.05, step=0.14;
+  pts.forEach((c,i)=>{
+    const d=Math.round((c-lo)/rg*9), pitch=root+12*Math.floor(d/5)+scale[d%5]+12;
+    const last=i===pts.length-1;
+    B.arp.triggerAttackRelease(Tone.Frequency(pitch,"midi").toFrequency(),last?0.6:0.2,t0+i*step,last?0.9:0.7);
+    if(i%3===0) B.bass.triggerAttackRelease(Tone.Frequency(root-12+scale[0],"midi").toFrequency(),step*2.5,t0+i*step,0.45);
+  });
+  document.querySelectorAll(".tile.previewing").forEach(t=>t.classList.remove("previewing"));
+  el.classList.add("previewing");
+  clearTimeout(previewTimer);
+  previewTimer=setTimeout(()=>el.classList.remove("previewing"),pts.length*step*1000+500);
+}
+
+/* ===================== game: Name that chart ===================== */
+// Rules, exactly as shown to the player:
+//  1. A mystery song plays — it was composed from one real market window.
+//  2. Three unlabelled price charts appear; click the one that wrote the song.
+//  3. Right answer: 100 points, plus a speed bonus of up to 50 (it shrinks to
+//     0 over the first 60 seconds) and +20 for every answer in a row after
+//     the first. Wrong answer: 0 points and the streak resets. Five rounds.
+const GAME_POOL=["AAPL","MSFT","NVDA","TSLA","AMZN","META","GOOGL","NFLX","JPM","XOM","KO","DIS","BA","INTC","AMD",
+  "SPY","QQQ","^GSPC","^N225","^HSI","BTC-USD","ETH-USD","GC=F","CL=F","EURUSD=X","0700.HK","600519.SS","7203.T","NKE","PFE"];
+const GAME_ROUNDS=5, BEST_KEY="ms-game-best";
+const game={round:0,score:0,streak:0,results:[],cur:null,next:null,playing:false,t0:0,answered:false,raf:0,endAt:0};
+const rnd=a=>a[Math.floor(Math.random()*a.length)];
+function bestScore(){ return Number(loadJSON(BEST_KEY,0))||0; }
+function paintHud(bump){
+  $("gRound").textContent=game.round?`${game.round} / ${GAME_ROUNDS}`:"–";
+  $("gScore").textContent=game.score.toLocaleString();
+  $("gStreak").textContent=game.streak;
+  $("gBest").textContent=bestScore().toLocaleString();
+  $("pointsTag").textContent=`🎯 best ${bestScore().toLocaleString()}`;
+  if(bump) ["gScore","gStreak"].forEach(id=>{ const el=$(id); el.classList.remove("bump"); void el.offsetWidth; el.classList.add("bump"); });
+}
+function randomWindow(){
+  const months=rnd([3,4,6,9,12]), endMax=Date.now()-10*864e5, endMin=Date.parse("2016-01-01");
+  const end=new Date(endMin+Math.random()*(endMax-endMin)), start=new Date(end.getTime()-months*30.4*864e5);
+  return {start:isoDay(start),end:isoDay(end)};
+}
+async function gameSeries(sym,w){
+  try{ const s=await fetchSeries(sym,w.start,w.end,"1d"); if(s.source==="yahoo"||s.source==="yfinance") return s; }catch(e){}
+  return null;
+}
+// Three windows whose returns differ enough that a good ear can tell them apart.
+async function buildRound(){
+  let best=null;
+  for(let attempt=0;attempt<4;attempt++){
+    const syms=[]; while(syms.length<3){ const s=rnd(GAME_POOL); if(!syms.includes(s)) syms.push(s); }
+    const got=(await Promise.all(syms.map(s=>gameSeries(s,randomWindow())))).filter(s=>s&&s.close.length>=30);
+    if(got.length<3) continue;
+    const opts=got.map(series=>{ const feat=extractFeatures(series,12); return {series,feat}; });
+    const rets=opts.map(o=>o.feat.totalReturn).sort((a,b)=>a-b);
+    const gap=Math.min(rets[1]-rets[0],rets[2]-rets[1]);
+    if(!best||gap>best.gap) best={opts,gap};
+    if(gap>=0.08) break;
+  }
+  if(!best){   // offline: three synthetic markets, clearly labelled as such
+    const syms=[]; while(syms.length<3){ const s=rnd(GAME_POOL); if(!syms.includes(s)) syms.push(s); }
+    best={opts:syms.map(sym=>{ const series=syntheticSeries(sym,"2024-01-01"); series.source="offline"; return {series,feat:extractFeatures(series,12)}; })};
+  }
+  const answer=Math.floor(Math.random()*3);
+  const t=best.opts[answer];
+  return {opts:best.opts,answer,score:composer(t.feat).compose()};
+}
+function chartSVG(closes,cls){
+  const lo=Math.min(...closes), hi=Math.max(...closes), rg=hi-lo||1, step=Math.max(1,Math.floor(closes.length/160));
+  const p=[]; for(let i=0;i<closes.length;i+=step) p.push(`${(i/(closes.length-1)*300).toFixed(1)},${(112-(closes[i]-lo)/rg*100).toFixed(1)}`);
+  p.push(`300,${(112-(closes[closes.length-1]-lo)/rg*100).toFixed(1)}`);
+  const col=cls==="up"?"var(--good)":cls==="down"?"var(--bad)":"var(--ink)";
+  return `<svg viewBox="0 0 300 120" preserveAspectRatio="none" aria-hidden="true">
+    <polygon points="0,120 ${p.join(" ")} 300,120" fill="${col}" opacity=".08"/>
+    <polyline points="${p.join(" ")}" fill="none" stroke="${col}" stroke-width="2" stroke-linejoin="round" vector-effect="non-scaling-stroke"/></svg>`;
+}
+function gameIntro(){
+  game.round=0; paintHud();
+  $("gBody").innerHTML=`<div class="g-intro">
+    <div>
+      <ol class="g-rules">
+        <li><b>Listen.</b> A mystery song plays. It was composed from one real market — a stock, index, coin or commodity — over a few months.</li>
+        <li><b>Pick the chart.</b> Three unlabelled price charts appear. Only one of them wrote the song. Click it.</li>
+        <li><b>Score.</b> Right answer = <b>100</b>, plus up to <b>+50</b> for answering fast and <b>+20</b> for every correct answer in a row. Five rounds.</li>
+      </ol>
+      <button class="primary" id="gStart">▶ Start game</button>
+      <p class="charthint" style="margin-top:12px">Tip: bright, major-sounding songs come from rising charts; dark ones from falling charts; fast, busy ones from jumpy charts.</p>
+    </div>
+    <div class="g-demo" aria-hidden="true"><div>A</div><div>B</div><div>C</div></div>
+  </div>`;
+  $("gStart").onclick=()=>{ game.score=0; game.streak=0; game.results=[]; game.next=null; nextRound(); };
+}
+async function nextRound(){
+  game.round++; paintHud(); game.answered=false;
+  $("gBody").innerHTML=`<div class="ai-status" style="padding:30px 0"><span class="spin"></span> Picking three real markets and composing the mystery song…</div>`;
+  let r=game.next; game.next=null;
+  try{ r=r?await r:await buildRound(); }catch(e){ $("gBody").innerHTML=`<p class="badge">Couldn't build a round (${esc(e.message)}). <button class="btn-ghost" id="gRetry">Try again</button></p>`; $("gRetry").onclick=()=>{ game.round--; nextRound(); }; return; }
+  game.cur=r;
+  if(game.round<GAME_ROUNDS) game.next=buildRound();   // prefetch while this one plays
+  $("gBody").innerHTML=`
+    <div class="g-player">
+      <button class="btn-play" id="gPlay" aria-label="Play the mystery song">▶</button>
+      <div class="g-prog"><div class="bar"><i id="gBar"></i></div><div class="meta mono"><span id="gTime">0:00</span><span>${fmtTime(r.score.totalBeats*60/r.score.tempo)}</span></div></div>
+      <span class="g-bonus" id="gBonus">speed bonus +50</span>
+    </div>
+    <p class="g-ask">Which chart wrote this song? <b>Click it.</b></p>
+    <div class="g-cards">${r.opts.map((o,i)=>`<button class="g-card" data-i="${i}"><span class="lt">${"ABC"[i]}</span>${chartSVG(o.series.close)}<div class="who">${o.series.close.length} trading days</div></button>`).join("")}</div>
+    <div id="gAfter"></div>`;
+  $("gPlay").onclick=()=>game.playing?gameStopAudio():gamePlay(r.score);
+  $("gBody").querySelectorAll(".g-card").forEach(b=>b.onclick=()=>answer(+b.dataset.i));
+  game.t0=performance.now();
+  gamePlay(r.score);
+  tickBonus();
+}
+function speedBonus(){ return Math.max(0,Math.round(50*(1-(performance.now()-game.t0)/60000))); }
+function tickBonus(){
+  if(game.answered||!$("gBonus")) return;
+  $("gBonus").textContent=`speed bonus +${speedBonus()}`;
+  setTimeout(tickBonus,250);
+}
+function explain(score,feat){
+  const sig=score.signature||{};
+  const mood=sig.family==="bright"?"a bright mode — the sound of a rising market":sig.family==="dark"?"a dark mode — the sound of a falling market":"an ambiguous modal colour — the sound of a market without a clear direction";
+  const pace=feat.avgVol<0.34?"an unhurried tempo, because the chart was calm":feat.avgVol<0.67?"a moderate tempo for a moderately jumpy chart":"a driving tempo, because the chart was very volatile";
+  return `You heard <b>${esc(score.keyName)} ${esc(score.mode)}</b> at <b>${Math.round(score.tempo)} BPM</b>: ${mood}, with ${pace}.`;
+}
+function answer(i){
+  if(game.answered) return;
+  game.answered=true;
+  const r=game.cur, ok=i===r.answer, bonus=ok?speedBonus():0, streakBonus=ok&&game.streak>=1?20*game.streak:0;
+  const pts=ok?100+bonus+streakBonus:0;
+  game.streak=ok?game.streak+1:0; game.score+=pts; game.results.push(ok);
+  if(game.score>bestScore()) saveJSON(BEST_KEY,game.score);
+  paintHud(true);
+  $("gBonus").textContent=ok?`+${pts}`:"+0";
+  $("gBody").querySelectorAll(".g-card").forEach((b,j)=>{
+    const o=r.opts[j], ret=o.feat.totalReturn*100, cls=ret>=0?"up":"down";
+    b.disabled=true;
+    b.querySelector("svg").outerHTML=chartSVG(o.series.close,cls);
+    b.querySelector(".who").innerHTML=`<b>${esc(o.series.symbol)}</b> ${esc(nameCache[o.series.symbol]||"")}<br>${esc(o.series.dates[0])} → ${esc(o.series.dates[o.series.dates.length-1])} · <span class="${cls}">${ret>=0?"+":""}${ret.toFixed(1)}%</span>`;
+    if(j===r.answer){ b.classList.add("right"); b.insertAdjacentHTML("beforeend",`<span class="badge-r up">the song</span>`); }
+    else if(j===i){ b.classList.add("wrong"); b.insertAdjacentHTML("beforeend",`<span class="badge-r down">your pick</span>`); }
+  });
+  const t=r.opts[r.answer], last=game.round>=GAME_ROUNDS;
+  $("gAfter").innerHTML=`<div class="g-result">
+    <div class="big ${ok?"up":"down"}">${ok?"✓ +"+pts:"✗ 0"}</div>
+    <p>${ok?`Right! 100 + ${bonus} speed${streakBonus?` + ${streakBonus} streak`:""}. `:`Not this time — it was chart <b>${"ABC"[r.answer]}</b>. `}${explain(r.score,t.feat)}</p>
+    <div style="display:flex;gap:8px;flex-wrap:wrap">
+      <button class="btn-ghost" id="gOpen">Open ${esc(t.series.symbol)} in the player</button>
+      <button class="primary" id="gNext">${last?"See results":"Next round →"}</button>
+    </div></div>`;
+  $("gNext").onclick=()=>{ gameStopAudio(); last?gameOver():nextRound(); };
+  $("gOpen").onclick=()=>{
+    gameStopAudio();
+    $("symbol").value=t.series.symbol; $("start").value=t.series.dates[0]; $("end").value=t.series.dates[t.series.dates.length-1];
+    rangeKey="custom"; intervalKey="1d"; paintRangeSeg(); paintIntervalSeg();
+    $("listen").scrollIntoView({behavior:"smooth"}); doCompose();
+  };
+}
+function gameOver(){
+  game.round=GAME_ROUNDS; paintHud();
+  const right=game.results.filter(Boolean).length, best=bestScore();
+  $("gBody").innerHTML=`<div class="g-final">
+    <div class="eyebrow">Final score</div>
+    <div class="big gold">${game.score.toLocaleString()}</div>
+    <div class="g-dots">${game.results.map(ok=>`<i class="${ok?"ok":"no"}"></i>`).join("")}</div>
+    <p class="mist">${right} of ${GAME_ROUNDS} right${game.score>=best&&game.score>0?" · new personal best!":` · best ${best.toLocaleString()}`}</p>
+    <button class="primary" id="gAgain">▶ Play again</button></div>`;
+  $("gAgain").onclick=()=>{ game.score=0; game.streak=0; game.results=[]; game.round=0; nextRound(); };
+}
+// The game has its own transport run (the main player is stopped first).
+async function gamePlay(score){
+  if(playing) stopPlayback();
+  try{ await Tone.start(); }catch(e){ return; }
+  const B=getBand(); ensureAnalyser();
+  Tone.Transport.stop(); Tone.Transport.cancel();
+  Tone.Transport.bpm.value=score.tempo;
+  const spb=60/score.tempo, dur=score.totalBeats*spb+1;
+  score.notes.forEach(n=>{
+    const startS=n.start*spb, durS=Math.max(0.05,n.duration*spb), v=Math.max(0.05,Math.min(1,n.velocity/127));
+    Tone.Transport.schedule(t=>triggerNote(B,n,t,durS,v),startS);
+  });
+  Tone.Transport.schedule(()=>{ Tone.Draw.schedule(()=>gameStopAudio(),0); },dur);
+  Tone.Transport.start();
+  game.playing=true; game.endAt=dur;
+  if($("gPlay")){ $("gPlay").textContent="■"; $("gPlay").classList.add("playing"); }
+  const tick=()=>{
+    if(!game.playing) return;
+    const s=Tone.Transport.seconds;
+    if($("gBar")) $("gBar").style.width=Math.min(100,s/dur*100)+"%";
+    if($("gTime")) $("gTime").textContent=fmtTime(s);
+    game.raf=requestAnimationFrame(tick);
+  };
+  tick();
+}
+function gameAudioEnded(){
+  game.playing=false; cancelAnimationFrame(game.raf);
+  if($("gPlay")){ $("gPlay").textContent="▶"; $("gPlay").classList.remove("playing"); }
+}
+function gameStopAudio(){
+  if(!game.playing) return;
+  gameAudioEnded();
+  try{ Tone.Transport.stop(); Tone.Transport.cancel(); releaseAll(); }catch(e){}
+}
+gameIntro();
+paintHud();
 
 // Seed the form from the share link if there is one, otherwise default to the
 // last ~6 months so live refresh has a moving edge.

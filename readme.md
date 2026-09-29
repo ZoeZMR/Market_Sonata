@@ -63,7 +63,15 @@ produces the same piece, and the analyst can tell you *why* each choice was made
   volume charts (Plotly), with hover values and drag/scroll zoom.
 - **The stage** — the price history drawn as a glowing line, with a light that
   travels to the part of the market each song section is reading and a live
-  spectrum of what you are hearing.
+  spectrum of what you are hearing. Hover the line to see a date, its price and
+  the part of the song that plays it; click to play from there, or click a
+  section in the song-form strip (Intro, Verse, Chorus, ...) to jump to it.
+- **♪ Previews** — every explorer tile has a ♪ button that plays the market's
+  last month as a short melody in its own key (major if it rose, minor if it fell).
+- **Name that chart** — a five-round listening game: a mystery song plays, three
+  real, unlabelled price charts appear, and you click the one that wrote it.
+  100 points per right answer, up to +50 for speed and +20 per answer in a row;
+  each reveal names the three markets and explains which musical clues gave it away.
 - **Compose Sonata** — one click runs the full pipeline and returns a real
   composition in song form.
 - **Music player** — in-browser playback of the whole band (Tone.js) with an
