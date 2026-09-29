@@ -222,3 +222,116 @@ def analyze_facts(facts: Dict[str, Any], grounded: str) -> Dict[str, Any]:
         "program_note": polished or grounded,
         "used_llm": polished is not None,
     }
+
+
+# ---------------------------------------------------------------------------
+# AI-written program note (streamed)
+#
+# Unlike the polish step above, this does not rephrase a template: Claude
+# writes the note from scratch, from a rich, structured account of the market
+# window and of the finished score that the frontend assembles. The prompt
+# keeps every claim anchored to those facts.
+# ---------------------------------------------------------------------------
+
+PROGRAM_NOTE_MODEL = os.environ.get("MARKET_SONATA_MODEL", "claude-opus-5")
+
+_PROGRAM_NOTE_SYSTEM = """\
+You are the resident writer of Market Sonata, a generative instrument that \
+turns a financial market's price history into an original piece of music. \
+For every piece it composes, you write the programme note a listener reads \
+while the music plays — the way a great concert-hall annotator or a music \
+critic would, not the way a template fills blanks.
+
+You will receive a JSON dossier with three parts:
+- "asset" and "market": what was traded, over which window, and what happened \
+(returns, drawdown and when it bottomed, the biggest single moves with dates, \
+and a chronological list of chapters with their mood).
+- "composition": the finished score — key, mode, tempo, length, instruments, \
+the song form with each section's start time, what each section musically \
+does and which dates of the market it reads, and the "ticker fingerprint" \
+(musical traits fixed by the symbol itself, independent of the market).
+- "mapping": the rules that connect the two (e.g. trend picks the modal \
+family, volatility sets tempo, rhythmic density and chord colour, volume sets \
+loudness, the chorus hook comes from the most energetic chapter).
+
+How to write it:
+- Tell the story of THIS window. Pick the two or three moments that matter \
+most — a turning point, the deepest fall, the most frenzied stretch — name \
+their dates, and say exactly what the listener hears there and why. Causality \
+is the point: market event → musical decision → what it feels like.
+- Write with a point of view and sensory, specific language; vary sentence \
+rhythm; avoid clichés ("rollercoaster", "tale of two halves", "buckle up") \
+and avoid restating the same number twice.
+- Be accurate. Use only facts in the dossier. Quote numbers as given (you may \
+round sensibly). Never invent events, news, causes, instruments, chords or \
+timings that are not in the dossier; if you don't know why the market moved, \
+describe the movement, not a reason for it.
+- This is art, not advice: no predictions, recommendations or opinions on \
+whether to buy or sell.
+
+Shape (Markdown, no preamble, no sign-off):
+1. A short, evocative title as a level-3 heading (###).
+2. Three or four paragraphs of prose (about 250–400 words in total).
+3. A "Listening guide" level-4 heading (####), then 4–6 bullets, each \
+starting with a timestamp in **m:ss** bold taken from the section start \
+times, telling the listener what to listen for at that moment and what \
+market moment it carries.
+"""
+
+_STYLES = {
+    "concert": "Voice: an elegant concert-programme annotator — warm, erudite, precise.",
+    "poetic": "Voice: lyrical and imagistic, closer to a prose poem, while staying factually exact.",
+    "critic": "Voice: a sharp, witty music critic reviewing the piece — opinionated about the music, never about the investment.",
+    "desk": "Voice: a markets-desk storyteller who also knows music — brisk, concrete, with the market narrative up front and each musical choice explained in plain terms.",
+    "simple": "Voice: friendly and plain for a curious listener with no finance or music background; explain every term you use in a few words.",
+}
+_LANGS = {
+    "en": "Write in English.",
+    "zh": "用简体中文写作。标题、正文和聆听指南全部使用中文；股票代码、调名（如 C# major）和数字保持原样。",
+}
+
+
+class NoteUnavailable(RuntimeError):
+    """Raised when no Anthropic credentials are configured."""
+
+
+def stream_program_note(dossier: Dict[str, Any], style: str = "concert",
+                        language: str = "en", request: str = ""):
+    """
+    Yield the programme note as text chunks while Claude writes it.
+    Raises NoteUnavailable if no API key is configured.
+    """
+    if not (os.environ.get("ANTHROPIC_API_KEY") or os.environ.get("ANTHROPIC_AUTH_TOKEN")):
+        raise NoteUnavailable("Set ANTHROPIC_API_KEY in backend/.env to enable AI-written notes.")
+    import json as _json
+    import anthropic
+
+    brief = [_STYLES.get(style, _STYLES["concert"]), _LANGS.get(language, _LANGS["en"])]
+    request = (request or "").strip()[:500]
+    if request:
+        brief.append("The listener also asked for this (honour it if it doesn't "
+                     "conflict with the rules above): " + request)
+
+    client = anthropic.Anthropic()
+    with client.beta.messages.stream(
+        model=PROGRAM_NOTE_MODEL,
+        max_tokens=16000,
+        thinking={"type": "adaptive"},
+        output_config={"effort": "medium"},
+        # Server-side fallback: if the primary model declines, the same request
+        # is re-run on the fallback inside this one call.
+        betas=["server-side-fallback-2026-06-01"],
+        fallbacks=[{"model": "claude-opus-4-8"}],
+        system=_PROGRAM_NOTE_SYSTEM,
+        messages=[{
+            "role": "user",
+            "content": ("<dossier>\n" + _json.dumps(dossier, ensure_ascii=False, indent=1)
+                        + "\n</dossier>\n\n" + "\n".join(brief)
+                        + "\n\nWrite the programme note."),
+        }],
+    ) as stream:
+        for text in stream.text_stream:
+            yield text
+        final = stream.get_final_message()
+        if final.stop_reason == "refusal":
+            yield "\n\n*(The analyst declined to write a note for this piece.)*"

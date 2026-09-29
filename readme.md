@@ -44,11 +44,26 @@ produces the same piece, and the analyst can tell you *why* each choice was made
 
 ## ✦ Features
 
-- **Market selection** — type any ticker the backend can resolve, or pick from
-  grouped quick chips (Tech, Indices, Crypto, and more) and a date range. Arrive
-  on a **shareable permalink** to restore a selection exactly.
-- **Market portrait** — interactive price, volatility and volume charts (Plotly),
-  with hover values and drag/scroll zoom.
+- **Every market Yahoo lists** — an "All markets" browser pages through the full
+  universe by country/region (41 of them), type (stocks, ETFs, mutual funds) and
+  sector, sorted by size, today's move, volume or price — e.g. 20,000+ US stocks,
+  7,000+ China A-shares, 9,000+ Hong Kong listings, 155,000+ mutual funds.
+- **Market explorer** — browse ~250 curated instruments (US sectors, ETFs,
+  world indices, crypto, currencies, commodities, Treasury yields, China A-shares,
+  Hong Kong, Japan, Europe) plus Yahoo's **live screeners** (gainers, losers, most
+  active, trending, most shorted, top crypto, funds…). Every tile shows today's
+  move and a one-month sparkline; filter and sort within any list.
+- **Search anything** — stocks, ETFs, indices, crypto, currencies, futures and
+  mutual funds by name or ticker (press `/` from anywhere).
+- **Any window, any bar size** — 1W … 10Y and MAX, or custom dates; bars from
+  5-minute to monthly (Auto picks a sensible size and respects Yahoo's intraday
+  history limits). A **shareable permalink** restores the exact selection.
+- **Live ticker tape** of major indices, crypto, FX, gold, oil and yields.
+- **Market portrait** — interactive price (line or candlestick), volatility and
+  volume charts (Plotly), with hover values and drag/scroll zoom.
+- **The stage** — the price history drawn as a glowing line, with a light that
+  travels to the part of the market each song section is reading and a live
+  spectrum of what you are hearing.
 - **Compose Sonata** — one click runs the full pipeline and returns a real
   composition in song form.
 - **Music player** — in-browser playback of the whole band (Tone.js) with an
@@ -64,11 +79,13 @@ produces the same piece, and the analyst can tell you *why* each choice was made
 - **Master volume**, remembered between visits.
 - **Export** — **MIDI** (always the complete score) and **WAV** (an offline
   render of exactly what you are hearing, mixer settings included).
-- **The Analyst's Note** — a music analyst explains the composition, grounded in
-  the actual score, including which decisions came from the market and which
-  came from the ticker. When `ANTHROPIC_API_KEY` is set, Claude polishes the
-  prose (tagged "Claude-polished" in the UI); otherwise a grounded rule-based
-  note renders instantly, with identical facts either way.
+- **The AI programme note** — Claude writes the note from scratch (streamed live)
+  from a dossier of the real window — dates of the peak, trough and biggest
+  moves, a chapter-by-chapter mood, and what each song section plays and which
+  dates it reads — ending with a timestamped listening guide. Pick a voice
+  (concert hall, poetic, critic, markets desk, plain words), English or 中文, or
+  ask for something specific. Needs `ANTHROPIC_API_KEY` in `backend/.env`;
+  without it a grounded rule-based note is shown.
 - **Live mode** — optional 60-second auto-refresh that recomposes when the last
   close changes, and never interrupts playback mid-piece.
 
