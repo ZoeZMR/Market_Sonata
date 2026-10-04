@@ -885,6 +885,16 @@
     .stage-band { height:150px; }
   }
 
+  /* while music plays: freeze the decorative full-screen layers so the GPU
+     isn't re-blurring and re-blending the whole viewport every frame */
+  body.is-playing .aurora i { animation-play-state:paused; }
+  body.is-playing .grain { display:none; }
+
+  /* play / stop on the Score panel */
+  .roll-title { display:flex; align-items:center; gap:16px; }
+  .roll-title .btn-play { width:48px; height:48px; font-size:16px; }
+  .roll-time { font-size:12px; color:var(--mist); margin-left:4px; }
+
   .g-final .g-dots { background:repeating-linear-gradient(to bottom,transparent 0,transparent 5px,var(--staff) 5px,var(--staff) 6px); max-width:260px; margin-left:auto; margin-right:auto; }
 </style>
 </head>
@@ -1144,9 +1154,13 @@
 
       <div class="card full" id="playerCard" style="display:none">
         <div class="card-hd">
-          <div>
-            <div class="eyebrow">Arrangement</div>
-            <h3 class="h3">Piano roll</h3>
+          <div class="roll-title">
+            <button class="btn-play" id="rollPlay" type="button" aria-label="Play">▶</button>
+            <div>
+              <div class="eyebrow">Arrangement</div>
+              <h3 class="h3">Piano roll</h3>
+            </div>
+            <span class="roll-time mono" id="rollTime"></span>
           </div>
           <div style="display:flex;gap:8px;flex-wrap:wrap">
             <a class="btn-ghost" id="dlBtn" download="sonata.mid">↓ MIDI</a>
@@ -1973,7 +1987,7 @@ if(typeof module!=="undefined"&&module.exports){module.exports={syntheticSeries,
 // Audio context tuned for smooth playback rather than minimum latency: bigger
 // buffers and more scheduling lookahead, so a busy page (stage, piano roll,
 // keyboard all animating) doesn't starve the audio thread and click.
-try{ if(typeof Tone!=="undefined") Tone.setContext(new Tone.Context({latencyHint:"playback",lookAhead:0.15})); }catch(e){}
+try{ if(typeof Tone!=="undefined") Tone.setContext(new Tone.Context({latencyHint:"playback",lookAhead:0.3})); }catch(e){}
 /* ===================== live data (backend → Yahoo Finance) ===================== */
 // Served by the FastAPI backend: same origin in production, :8000 when this
 // file is opened directly from disk (python backend/main.py).
@@ -2224,13 +2238,41 @@ function renderCharts(series){
 }
 
 /* ---------- piano roll with song sections + drum lane ---------- */
-function dpiCanvas(cv,h){const w=cv.clientWidth||600;const r=window.devicePixelRatio||1;cv.width=w*r;cv.height=h*r;const ctx=cv.getContext("2d");ctx.setTransform(r,0,0,r,0,0);return {ctx,w,h};}
+function dpiCanvas(cv,h){const w=cv.clientWidth||parseFloat(cv.style.width)||600;const r=window.devicePixelRatio||1;cv.width=w*r;cv.height=h*r;const ctx=cv.getContext("2d");ctx.setTransform(r,0,0,r,0,0);return {ctx,w,h};}
 const PITCHED=["melody","pad","bass","arp"];
 const DRUM_ROW={hat:0,snare:1,kick:2};
+/* drawRoll() runs every animation frame during playback, so it must be cheap:
+   the notes are drawn ONCE onto an offscreen layer (rebuilt only when the
+   song, width, theme or mixer changes) and each frame just copies that layer
+   and adds the playhead. Redrawing ~1,000 notes, resizing the canvas and
+   reading theme colours 60×/s starved Tone.js's main-thread scheduler and was
+   heard as crackle/hiss. When the roll is hidden, nothing is drawn at all.   */
+let rollLayer=null, rollLayerKey="";
+const scoreIds=new WeakMap(); let scoreIdSeq=0;
+function scoreId(s){ if(!scoreIds.has(s)) scoreIds.set(s,++scoreIdSeq); return scoreIds.get(s); }
+let rollLastDraw=0;
 function drawRoll(){
-  const cv=$("rollCv"); const {ctx,w,h}=dpiCanvas(cv,260);
-  ctx.clearRect(0,0,w,h);
-  if(!current)return;
+  const cv=$("rollCv");
+  if(!cv.offsetParent) return;                 // Score panel not visible
+  // While playing, 30 fps is plenty for a moving playhead (dragging stays live).
+  const now=performance.now();
+  if(playing&&!dragging&&now-rollLastDraw<32) return;
+  rollLastDraw=now;
+  const w=cv.clientWidth, h=260, r=window.devicePixelRatio||1;
+  if(!w) return;
+  if(cv.width!==Math.round(w*r)||cv.height!==Math.round(h*r)){ cv.width=Math.round(w*r); cv.height=Math.round(h*r); }
+  const ctx=cv.getContext("2d"); ctx.setTransform(r,0,0,r,0,0); ctx.clearRect(0,0,w,h);
+  if(!current) return;
+  const key=[scoreId(current.score),w,r,document.documentElement.dataset.theme,[...muted].sort().join(",")].join("|");
+  if(key!==rollLayerKey||!rollLayer){
+    rollLayer=document.createElement("canvas"); rollLayer.style.width=w+"px";
+    const lc=dpiCanvas(rollLayer,h); renderRollLayer(lc.ctx,w,h);
+    rollLayer.playhead=css("--playhead"); rollLayerKey=key;
+  }
+  ctx.drawImage(rollLayer,0,0,w,h);
+  ctx.fillStyle=rollLayer.playhead; ctx.fillRect(rollProgress*w,0,2,h);
+}
+function renderRollLayer(ctx,w,h){
   // Colours come from the active theme, so the roll re-skins with everything else.
   const col={}; PITCHED.concat(["kick","snare","hat"]).forEach(v=>{col[v]=css("--v-"+v);});
   const {notes,sections,totalBeats}=current.score;
@@ -2266,8 +2308,7 @@ function drawRoll(){
     ctx.globalAlpha=(0.35+n.velocity/127*0.6)*(isMuted(n.voice)?0.18:1);
     ctx.fillRect(x,y,2.5,7);
   });
-  // playhead
-  ctx.globalAlpha=1;ctx.fillStyle=css("--playhead");ctx.fillRect(rollProgress*w,0,2,h);
+  ctx.globalAlpha=1;
 }
 
 
@@ -3523,7 +3564,7 @@ document.querySelectorAll("[data-count]").forEach(el=>countObs.observe(el));
   const cv=$("heroCv"); let t=0;
   function frame(){
     requestAnimationFrame(frame);
-    if(document.hidden) return;
+    if(document.hidden||!cv.offsetParent) return;                // hidden screen: draw nothing
     const r=cv.getBoundingClientRect(); if(r.bottom<0) return;   // scrolled away
     const dpr=window.devicePixelRatio||1, w=cv.clientWidth, h=cv.clientHeight;
     if(cv.width!==Math.round(w*dpr)||cv.height!==Math.round(h*dpr)){ cv.width=Math.round(w*dpr); cv.height=Math.round(h*dpr); }
@@ -4401,6 +4442,19 @@ document.addEventListener("click",e=>{
   else if(a.matches(".sty")) chime([0,2,4,6],{gap:.06,dur:.3});
   else chime([4],{dur:.3});
 },true);
+
+// Play / stop from the Score panel too, mirroring the stage button.
+function paintRollPlay(){
+  // While music plays, the decorative full-screen layers stand still (see .is-playing).
+  document.body.classList.toggle("is-playing",!!playing);
+  const b=$("rollPlay"); if(!b) return;
+  b.textContent=playing?"■":"▶"; b.classList.toggle("playing",playing); b.setAttribute("aria-label",playing?"Stop":"Play");
+}
+$("rollPlay").onclick=()=>{ playing?stopPlayback():playScore(); };
+{ const _play=playScore, _stop=stopPlayback;
+  playScore=async function(){ await _play.apply(this,arguments); paintRollPlay(); };
+  stopPlayback=function(){ _stop.apply(this,arguments); paintRollPlay(); }; }
+setInterval(()=>{ const t=$("rollTime"); if(t&&current&&route.panel==="score") t.textContent=`${$("tNow").textContent} / ${$("tTotal").textContent}`; },500);
 
 // Wire the musical layer into every render.
 const _renderStudio=render;
