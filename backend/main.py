@@ -185,7 +185,37 @@ def universe(
         return fetch_universe(region, sector, type, sort, order != "asc",
                               offset, size, main_only)
     except Exception as exc:                                  # noqa: BLE001
-        raise HTTPException(502, f"Universe screener unavailable: {exc}")
+        # Yahoo sometimes refuses its full-listing screener from cloud hosts.
+        # Rather than an empty page, fall back to the hand-picked list for the
+        # same region (prices and sparklines still come from /api/spark).
+        print(f"[universe] Yahoo screener failed, using curated fallback: {exc!r}")
+        items = _curated_fallback(region, type)
+        if not items:
+            raise HTTPException(502, f"Universe screener unavailable: {exc}")
+        return {"total": len(items), "offset": 0, "quotes": items, "fallback": True,
+                "note": "Yahoo's full listing is unavailable right now, so this is a hand-picked selection."}
+
+
+# Which curated catalog groups stand in for a region when Yahoo's screener fails.
+_FALLBACK_GROUPS = {
+    "us": ["tech", "finance", "health", "consumer", "industrial"],
+    "cn": ["cn"], "hk": ["hk"], "jp": ["jp"],
+    **{r: ["eu"] for r in ("gb", "de", "fr", "nl", "ch", "it", "es", "se", "no", "dk", "fi", "be", "at", "ie", "pt")},
+}
+
+
+def _curated_fallback(region: str, quote_type: str) -> list:
+    groups = {g["id"]: g for g in market_catalog()}
+    ids = ["etf"] if quote_type == "ETF" else _FALLBACK_GROUPS.get(region, [])
+    if quote_type == "ETF" and region != "us":
+        return []
+    seen, out = set(), []
+    for gid in ids:
+        for it in groups.get(gid, {}).get("items", []):
+            if it["symbol"] not in seen:
+                seen.add(it["symbol"])
+                out.append({"symbol": it["symbol"], "name": it["name"]})
+    return out
 
 
 @app.get("/api/universe/meta")

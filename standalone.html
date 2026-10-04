@@ -802,6 +802,89 @@
   .g-dots { gap:14px; padding:8px 0; }
   .g-dots i { width:16px; height:12px; border-radius:50%; transform:rotate(-22deg); position:relative; }
   .g-dots i::after { content:""; position:absolute; right:-1px; bottom:5px; width:2px; height:20px; background:inherit; transform:rotate(22deg); transform-origin:bottom; }
+  /* =====================================================================
+     Breathing room: one vertical rhythm for the whole site.
+     ===================================================================== */
+  :root { --vs-1:12px; --vs-2:20px; --vs-3:32px; --vs-4:48px; --vs-5:72px; }
+  .crumbs { padding-top:10px; padding-bottom:10px; }
+  .panel { padding-top:var(--vs-4); }
+  .sec { padding-top:var(--vs-5); }
+  .panel.sec { padding-top:var(--vs-4); }
+  .sec-hd { margin-bottom:var(--vs-4); gap:28px; }
+  .sec-sub { line-height:1.7; }
+  .card { padding:30px; }
+  .card-hd { margin-bottom:var(--vs-2); }
+  .grid { gap:28px; margin-top:0; }
+  .subhd { margin:var(--vs-3) 0 var(--vs-1); }
+  .stepper { margin-top:var(--vs-3); padding-top:12px; padding-bottom:12px; }
+  .sub-tabs { margin-top:var(--vs-3); }
+  .next-hint { margin-top:var(--vs-4); padding:24px 26px; }
+
+  /* stage: title block / price band / controls, each with room */
+  .stage, .stage-in { min-height:0; }
+  .stage-in { padding:44px 48px 34px; gap:var(--vs-2); }
+  .asset-name { margin-top:12px; }
+  .asset-px .rng { margin-top:10px; }
+  .music-chips { gap:10px; margin-top:4px; }
+  .stage-band { flex:none; height:clamp(170px,26vh,260px); }
+  .stage-bottom { margin-top:0; gap:16px; }
+  .form-strip { margin-top:6px; gap:6px; }
+  .form-strip button { padding:10px 4px; }
+  .keys { margin-top:var(--vs-1); height:52px; }
+
+  /* studio panels */
+  .compose-grid { gap:24px; }
+  .panel[data-panel="compose"] > .card { margin-top:28px !important; }
+  .deck { padding:24px 28px; gap:18px 28px; }
+  .styles { gap:14px; }
+  .sty { padding:18px; gap:8px; }
+  .bp-row { padding:15px 0; }
+  .cp-go { margin-top:var(--vs-3); }
+  .ex-sub { margin:var(--vs-2) 0; }
+  .tiles { gap:14px; }
+  .tile { padding:14px 16px 12px; }
+  .ex-foot { margin-top:var(--vs-2); }
+  .player-row { margin-top:var(--vs-2); }
+  .stats { gap:12px; margin-top:var(--vs-3); }
+  .note p { margin-bottom:18px; }
+  .ai-bar { padding-bottom:24px; gap:16px 26px; }
+  .lib { gap:18px; margin-top:28px; }
+  .lib-item { padding:20px; gap:8px; }
+  #cmpCard { margin-bottom:8px; }
+
+  /* game mode */
+  .lobby { gap:32px; }
+  .lobby-path { gap:14px; }
+  .path-step { padding:20px 22px; }
+  .lw-stats { margin-top:22px; gap:10px; }
+  .game-hud { gap:14px; margin-bottom:28px; }
+  .g-ask { margin:28px 0 16px; }
+  .g-cards { gap:18px; }
+  .g-result { margin-top:24px; padding:20px 22px; }
+  .tut-body { min-height:340px; gap:40px; }
+  .tut-nav { margin-top:30px; }
+  .shop-bar { padding:18px 24px; margin-bottom:24px; }
+  .shop-grid { gap:18px; }
+  .item { padding:22px; gap:10px; }
+  .coupons { gap:12px; }
+
+  /* home + how */
+  .doors { gap:20px; margin-top:44px; }
+  .door { padding:26px 26px 22px; gap:8px; }
+  .kpis { margin-top:64px; }
+  .steps { gap:20px; }
+  .step { padding:28px; }
+  .map { margin-top:28px; }
+  .site-foot { margin-top:110px; }
+  body:not(.at-home) .site-foot { margin-top:96px; }
+
+  @media (max-width: 720px){
+    :root { --vs-3:24px; --vs-4:32px; --vs-5:48px; }
+    .card { padding:20px; }
+    .stage-in { padding:26px 20px 22px; }
+    .stage-band { height:150px; }
+  }
+
   .g-final .g-dots { background:repeating-linear-gradient(to bottom,transparent 0,transparent 5px,var(--staff) 5px,var(--staff) 6px); max-width:260px; margin-left:auto; margin-right:auto; }
 </style>
 </head>
@@ -974,6 +1057,7 @@
           </div>
         </div>
         <div class="music-chips" id="musicChips"></div>
+        <div class="stage-band" id="stageBand" aria-hidden="true"></div>
         <div class="stage-bottom">
           <button class="btn-play" id="playBtn" aria-label="Play">▶</button>
           <div class="now-box">
@@ -1886,6 +1970,10 @@ if(typeof module!=="undefined"&&module.exports){module.exports={syntheticSeries,
 </script>
 
 <script>
+// Audio context tuned for smooth playback rather than minimum latency: bigger
+// buffers and more scheduling lookahead, so a busy page (stage, piano roll,
+// keyboard all animating) doesn't starve the audio thread and click.
+try{ if(typeof Tone!=="undefined") Tone.setContext(new Tone.Context({latencyHint:"playback",lookAhead:0.15})); }catch(e){}
 /* ===================== live data (backend → Yahoo Finance) ===================== */
 // Served by the FastAPI backend: same origin in production, :8000 when this
 // file is opened directly from disk (python backend/main.py).
@@ -2430,19 +2518,30 @@ function makeBassVoice(typeKey){
    so the very same band is used for live playback and for the offline render
    behind the WAV export — what you download is what you heard.               */
 function buildBand(){
-  const rev=new Tone.Reverb({decay:3.5,wet:0.3}).toDestination();
+  // Master bus: every voice is summed here, gently compressed, trimmed and
+  // brick-wall limited before the speakers. Without it, loud passages (a
+  // 4–5-note sawtooth pad + lead + arp + bass + kit) went past full scale and
+  // clipped, which is heard as crackle.
+  const limiter=new Tone.Limiter(-1.5).toDestination();
+  const trim=new Tone.Gain(0.7).connect(limiter);
+  const master=new Tone.Compressor({threshold:-20,ratio:3,attack:0.01,release:0.25}).connect(trim);
+  const rev=new Tone.Reverb({decay:3.5,wet:0.3}).connect(master);
   const padFilter=new Tone.Filter(1100,"lowpass").connect(rev);
   const lead=makePolyVoice("melody",INSTRUMENTS.melody).connect(rev);
   const pad=makePolyVoice("pad",INSTRUMENTS.pad).connect(padFilter);
-  const bass=makeBassVoice(INSTRUMENTS.bass).toDestination();
+  const bass=makeBassVoice(INSTRUMENTS.bass).connect(master);
   const arp=makePolyVoice("arp",INSTRUMENTS.arp).connect(rev);
-  const kick=new Tone.MembraneSynth({pitchDecay:0.04,octaves:6,envelope:{attack:0.001,decay:0.35,sustain:0}}).toDestination();
-  kick.volume.value=-4;
-  const snare=new Tone.NoiseSynth({noise:{type:"white"},envelope:{attack:0.001,decay:0.16,sustain:0}}).connect(new Tone.Filter(1800,"highpass").toDestination());
-  snare.volume.value=-12;
-  const hat=new Tone.NoiseSynth({noise:{type:"white"},envelope:{attack:0.001,decay:0.045,sustain:0}}).connect(new Tone.Filter(8000,"highpass").toDestination());
-  hat.volume.value=-20;
-  return {lead,pad,bass,arp,kick,snare,hat,rev,padFilter};
+  const kick=new Tone.MembraneSynth({pitchDecay:0.04,octaves:6,envelope:{attack:0.001,decay:0.35,sustain:0}}).connect(master);
+  kick.volume.value=-6;
+  // Snare and hats: pink (softer) noise, band-limited and quieter, so the kit
+  // reads as drums rather than a constant "shh" of white noise.
+  const snare=new Tone.NoiseSynth({noise:{type:"pink"},envelope:{attack:0.001,decay:0.14,sustain:0}})
+    .chain(new Tone.Filter(1500,"highpass"),new Tone.Filter(9000,"lowpass"),master);
+  snare.volume.value=-14;
+  const hat=new Tone.NoiseSynth({noise:{type:"pink"},envelope:{attack:0.001,decay:0.03,sustain:0}})
+    .chain(new Tone.Filter(7000,"highpass"),new Tone.Filter(12000,"lowpass"),master);
+  hat.volume.value=-27;
+  return {lead,pad,bass,arp,kick,snare,hat,rev,padFilter,master};
 }
 let band=null;
 function getBand(){ if(!band) band=buildBand(); return band; }
@@ -2455,7 +2554,7 @@ function setInstrument(group,typeKey){
   const bandKey=GROUP_BAND_KEY[group];
   const old=band[bandKey];
   const fresh=group==="bass"?makeBassVoice(typeKey):makePolyVoice(group,typeKey);
-  fresh.connect(group==="bass"?Tone.getDestination():group==="pad"?band.padFilter:band.rev);
+  fresh.connect(group==="bass"?band.master:group==="pad"?band.padFilter:band.rev);
   band[bandKey]=fresh;
   try{old.dispose();}catch(e){}
 }
@@ -2799,13 +2898,17 @@ function drawStage(){
   // --- price line ---
   const closes=current?current.series.close:null;
   const pts=[];
+  // The line lives in its own band (#stageBand) between the title block and
+  // the controls, so it never runs through text or buttons.
+  const band=$("stageBand");
+  const bTop=band&&band.offsetHeight?band.offsetTop+6:h*0.4, bBot=band&&band.offsetHeight?band.offsetTop+band.offsetHeight-6:h*0.9, bH=bBot-bTop;
   if(closes&&closes.length>1){
     const step=Math.max(1,Math.floor(closes.length/600));
     const lo=Math.min(...closes), hi=Math.max(...closes), rg=hi-lo||1;
-    for(let i=0;i<closes.length;i+=step) pts.push([i/(closes.length-1)*w, h*0.9-(closes[i]-lo)/rg*h*0.5]);
-    pts.push([w, h*0.9-(closes[closes.length-1]-lo)/rg*h*0.5]);
+    for(let i=0;i<closes.length;i+=step) pts.push([i/(closes.length-1)*w, bBot-(closes[i]-lo)/rg*bH]);
+    pts.push([w, bBot-(closes[closes.length-1]-lo)/rg*bH]);
   }else{
-    for(let i=0;i<=120;i++){ const x=i/120; pts.push([x*w, h*0.66-Math.sin(x*6+stageT*0.6)*h*0.06*Math.sin(x*3.1)-x*h*0.12]); }
+    for(let i=0;i<=120;i++){ const x=i/120; pts.push([x*w, bTop+bH*(0.62-Math.sin(x*6+stageT*0.6)*0.14*Math.sin(x*3.1)-x*0.24)]); }
   }
   const up=closes?closes[closes.length-1]>=closes[0]:true;
   // area
@@ -3024,6 +3127,15 @@ async function showSub(sub,keepCount){
       if(seq!==ex.seq) return;
       ex.rows=(d.quotes||[]).map(q=>{ if(q.name) nameCache[q.symbol]=q.name; return {...q}; });
       uni.total=d.total||0;
+      if(d.fallback){   // Yahoo refused the full listing: show the curated stand-in, clearly labelled
+        $("uniPager").hidden=true;
+        $("exNote").textContent=d.note||"Showing a hand-picked selection.";
+        paintTiles();
+        $("exCount").textContent=`${ex.rows.length} hand-picked markets · Yahoo's full listing is unavailable right now`;
+        fillSpark(seq);
+        return;
+      }
+      $("uniPager").hidden=false;
       const pages=Math.max(1,Math.ceil(uni.total/UNI_PAGE));
       $("uniPage").textContent=`page ${(uni.page+1).toLocaleString()} / ${pages.toLocaleString()}`;
       $("uniPrev").disabled=uni.page<=0; $("uniNext").disabled=uni.page>=pages-1;
@@ -3056,7 +3168,8 @@ async function showSub(sub,keepCount){
   }catch(e){
     if(seq!==ex.seq) return;
     ex.rows=[];
-    $("tiles").innerHTML=`<div class="badge" style="grid-column:1/-1;padding:18px 4px">Couldn't load this list — is the backend running? (python backend/main.py)</div>`;
+    $("exCount").textContent="";   // don't leave the previous list's count behind
+    $("tiles").innerHTML=`<div class="badge" style="grid-column:1/-1;padding:18px 4px">Couldn't load this list from Yahoo right now. Try another tab, or search for any stock in the box above.</div>`;
     return;
   }
   paintTiles();

@@ -20,6 +20,7 @@ import json
 import math
 import re
 import time
+import urllib.error
 import urllib.parse
 import urllib.request
 
@@ -546,45 +547,82 @@ UNIVERSE_SORTS = {"size", "percentchange", "dayvolume", "intradayprice"}
 _US_MAIN_EXCHANGES = ["NMS", "NGM", "NCM", "NYQ", "ASE", "PCX", "BTS"]
 
 
+class _YahooBlocked(Exception):
+    """Yahoo refused the request (rate limit / bot check)."""
+
+
 class _YahooSession:
-    """Cookie + crumb pair for Yahoo's authenticated JSON endpoints."""
+    """
+    Cookie + crumb pair for Yahoo's authenticated JSON endpoints.
+
+    Prefers curl_cffi impersonating Chrome: from cloud hosts (Render) Yahoo
+    answers plain-urllib requests for the crumb with "429 Too Many Requests",
+    because it fingerprints the TLS handshake. curl_cffi ships with recent
+    yfinance releases; if it is missing we fall back to urllib.
+    """
 
     def __init__(self) -> None:
-        import http.cookiejar
-        self.jar = http.cookiejar.CookieJar()
-        self.opener = urllib.request.build_opener(
-            urllib.request.HTTPCookieProcessor(self.jar))
-        self.opener.addheaders = [("User-Agent", _UA)]
         self.crumb = ""
+        try:
+            from curl_cffi import requests as creq
+            self.s = creq.Session(impersonate="chrome")
+            self.kind = "curl_cffi"
+        except Exception:                                     # noqa: BLE001
+            import http.cookiejar
+            self.s = urllib.request.build_opener(
+                urllib.request.HTTPCookieProcessor(http.cookiejar.CookieJar()))
+            self.s.addheaders = [("User-Agent", _UA)]
+            self.kind = "urllib"
+
+    def _get_text(self, url: str) -> Tuple[int, str]:
+        if self.kind == "curl_cffi":
+            r = self.s.get(url, timeout=12, allow_redirects=True)
+            return r.status_code, r.text
+        try:
+            with self.s.open(url, timeout=12) as resp:
+                return resp.status, resp.read().decode()
+        except urllib.error.HTTPError as exc:
+            return exc.code, ""
 
     def refresh(self) -> None:
         try:
-            self.opener.open("https://fc.yahoo.com", timeout=10)
+            self._get_text("https://fc.yahoo.com")   # answers 404 but sets the A3 cookie
         except Exception:                                     # noqa: BLE001
-            pass    # fc.yahoo.com answers 404 but still sets the cookie
-        self.crumb = self.opener.open(
-            "https://query1.finance.yahoo.com/v1/test/getcrumb", timeout=10
-        ).read().decode().strip()
-        if not self.crumb or "<" in self.crumb:
-            raise ValueError("could not obtain a Yahoo crumb")
+            pass
+        for host in ("query2", "query1"):
+            code, text = self._get_text(f"https://{host}.finance.yahoo.com/v1/test/getcrumb")
+            crumb = (text or "").strip()
+            if code == 200 and crumb and "<" not in crumb and " " not in crumb:
+                self.crumb = crumb
+                return
+            if code == 429:
+                raise _YahooBlocked("Yahoo rate-limited the crumb request (429)")
+        raise _YahooBlocked("could not obtain a Yahoo crumb")
 
     def post_json(self, url: str, body: Dict[str, Any]) -> Dict[str, Any]:
-        import urllib.error
         for attempt in range(2):
             if not self.crumb:
                 self.refresh()
-            req = urllib.request.Request(
-                f"{url}?crumb={urllib.parse.quote(self.crumb)}&formatted=false&lang=en-US",
-                data=json.dumps(body).encode(),
-                headers={"Content-Type": "application/json", "Accept": "application/json"})
-            try:
-                with self.opener.open(req, timeout=20) as resp:
-                    return json.load(resp)
-            except urllib.error.HTTPError as exc:
-                if exc.code in (401, 403) and attempt == 0:
-                    self.crumb = ""          # stale crumb: fetch a new one once
-                    continue
-                raise
+            full = f"{url}?crumb={urllib.parse.quote(self.crumb)}&formatted=false&lang=en-US"
+            if self.kind == "curl_cffi":
+                r = self.s.post(full, json=body, timeout=20, headers={"Accept": "application/json"})
+                code = r.status_code
+                if code == 200:
+                    return r.json()
+            else:
+                req = urllib.request.Request(full, data=json.dumps(body).encode(),
+                    headers={"Content-Type": "application/json", "Accept": "application/json"})
+                try:
+                    with self.s.open(req, timeout=20) as resp:
+                        return json.load(resp)
+                except urllib.error.HTTPError as exc:
+                    code = exc.code
+            if code in (401, 403) and attempt == 0:
+                self.crumb = ""              # stale crumb: fetch a new one once
+                continue
+            if code == 429:
+                raise _YahooBlocked("Yahoo rate-limited the screener (429)")
+            raise RuntimeError(f"Yahoo screener answered HTTP {code}")
         raise RuntimeError("unreachable")
 
 
@@ -622,7 +660,13 @@ def fetch_universe(region: str = "us", sector: str = "", quote_type: str = "EQUI
         global _session
         if _session is None:
             _session = _YahooSession()
-        payload = _session.post_json(_SCREEN_POST_URL, body)
+        try:
+            payload = _session.post_json(_SCREEN_POST_URL, body)
+        except _YahooBlocked:
+            # One retry with a brand-new session (new cookie, new crumb).
+            time.sleep(1.2)
+            _session = _YahooSession()
+            payload = _session.post_json(_SCREEN_POST_URL, body)
         fin = payload.get("finance") or {}
         if fin.get("error"):
             raise ValueError(str(fin["error"]))

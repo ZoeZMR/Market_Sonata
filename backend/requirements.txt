@@ -15,6 +15,9 @@ pydantic==2.9.2
 # whatever release actually resolves against the numpy pin below, instead of
 # failing the build over a dependency the app can run without.
 yfinance>=0.2.65
+# Browser-impersonating HTTP client for Yahoo's cookie+crumb endpoints (the
+# "All markets" screener): plain urllib gets 429 from cloud hosts like Render.
+curl_cffi>=0.7
 
 # Music generation
 pretty_midi==0.2.10
