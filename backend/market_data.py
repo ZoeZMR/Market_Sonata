@@ -18,6 +18,7 @@ from typing import List, Dict, Any, Tuple
 import datetime as dt
 import json
 import math
+import re
 import time
 import urllib.parse
 import urllib.request
@@ -33,10 +34,12 @@ _CHART_URL = "https://query2.finance.yahoo.com/v8/finance/chart/{symbol}"
 _SEARCH_URL = "https://query2.finance.yahoo.com/v1/finance/search"
 
 # Quote types worth surfacing in the ticker search box. Yahoo's search also
-# returns "OPTION", "MUTUALFUND", "FUTURE" etc. that the engine can technically
-# chart but that are rarely what someone typing a company name wants.
+# returns "OPTION", "MUTUALFUND" etc. Mutual funds are left out on purpose:
+# they report one NAV a day with zero volume, and closed or liquidated funds
+# keep a frozen last price on Yahoo, so they make flat, misleading songs.
 _SEARCH_TYPES = {"EQUITY", "ETF", "INDEX", "CRYPTOCURRENCY", "CURRENCY",
-                 "FUTURE", "MUTUALFUND"}
+                 "FUTURE"}
+_NICHE_FUTURE = re.compile(r"\b(stock|micro|e-mini|mini|tas|1-ounce)\b", re.I)
 
 # Bar sizes the chart endpoint serves, and how far back Yahoo keeps each
 # intraday one. A request past the cap is clamped rather than failing outright.
@@ -315,6 +318,11 @@ def search_symbols(query: str, limit: int = 20) -> List[Dict[str, str]]:
         if not symbol or qtype not in _SEARCH_TYPES:
             continue
         name = q.get("longname") or q.get("shortname") or symbol
+        # Keep the main commodity/index contracts (GC=F, CL=F, ES=F …) but drop
+        # the single-stock, micro, e-mini, TAS and odd-lot variants Yahoo also
+        # returns — "palantir" should find PLTR, not SPLTR=F and XPLTR=F.
+        if qtype == "FUTURE" and _NICHE_FUTURE.search(name):
+            continue
         out.append({
             "symbol": symbol,
             "name": name,
@@ -394,11 +402,6 @@ SCREENERS = {
     "aggressive_small_caps": "Aggressive small caps",
     "most_shorted_stocks": "Most shorted",
     "all_cryptocurrencies_us": "All crypto",
-    "top_mutual_funds": "Top mutual funds",
-    "portfolio_anchors": "Portfolio anchors",
-    "solid_large_growth_funds": "Large growth funds",
-    "high_yield_bond": "High-yield bond funds",
-    "conservative_foreign_funds": "Foreign funds",
 }
 
 _CACHE: Dict[str, Tuple[float, Any]] = {}
@@ -535,8 +538,8 @@ REGIONS = {
 SECTORS = ["Technology", "Communication Services", "Consumer Cyclical",
            "Consumer Defensive", "Financial Services", "Healthcare",
            "Industrials", "Energy", "Basic Materials", "Real Estate", "Utilities"]
-UNIVERSE_TYPES = {"EQUITY": "intradaymarketcap", "ETF": "fundnetassets",
-                  "MUTUALFUND": "fundnetassets"}
+# Stocks and ETFs only (no mutual funds; see _SEARCH_TYPES).
+UNIVERSE_TYPES = {"EQUITY": "intradaymarketcap", "ETF": "fundnetassets"}
 UNIVERSE_SORTS = {"size", "percentchange", "dayvolume", "intradayprice"}
 # US listings on the main exchanges (Nasdaq tiers, NYSE, NYSE American/Arca,
 # Cboe) — excludes the thinly traded OTC tail that otherwise tops "% change".

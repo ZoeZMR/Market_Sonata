@@ -232,6 +232,9 @@
   .tile svg { width:92px; height:30px; flex:0 0 auto; }
   .tile.skel .t-px, .tile.skel .t-chg { color:var(--faint); }
   .ex-foot { display:flex; justify-content:space-between; align-items:center; margin-top:12px; gap:10px; flex-wrap:wrap; }
+  .ex-div { grid-column:1/-1; padding:14px 4px 4px; display:flex; align-items:center; gap:8px; }
+  .ex-div:not(:first-child) { border-top:1px dashed var(--line-2); margin-top:6px; }
+  @media (min-width: 721px){ .ex-tools input { width:220px; } }
 
   /* ---------- main grid ---------- */
   .grid { display:grid; grid-template-columns: minmax(0,1.35fr) minmax(0,1fr); gap: 20px; margin-top: 22px; }
@@ -723,6 +726,83 @@
   .cmp td.win { color:var(--gold-ink); font-weight:600; }
   .cmp-note { color:var(--mist); font-size:14px; line-height:1.6; margin:14px 0 0; }
   .cmp-note b { color:var(--ink); }
+
+  /* =====================================================================
+     Musical layer: staff-line stepper, live keyboard, tempo marks,
+     equaliser loaders, clef watermark, interface sounds toggle.
+     ===================================================================== */
+  :root { --staff:color-mix(in srgb,var(--ink) 9%,transparent); }
+  /* five staff lines, as a reusable background */
+  .staffed { background-image:repeating-linear-gradient(to bottom,transparent 0,transparent 7px,var(--staff) 7px,var(--staff) 8px); }
+
+  /* stepper drawn on a staff: progress reads as a rising melody */
+  .stepper { padding-left:56px; }
+  .stepper::before { content:"𝄞"; position:absolute; left:14px; top:50%; transform:translateY(-54%); font-size:52px; line-height:1;
+    color:var(--gold-ink); opacity:.75; font-family:"Segoe UI Symbol","Noto Music","Apple Symbols",serif; pointer-events:none; }
+  .stepper::after { content:""; position:absolute; left:46px; right:12px; top:50%; height:33px; transform:translateY(-30%); pointer-events:none; z-index:-1;
+    background:repeating-linear-gradient(to bottom,var(--staff) 0,var(--staff) 1px,transparent 1px,transparent 8px); }
+  .stp .dot { width:20px; height:15px; border-radius:50%; transform:rotate(-22deg) translateY(var(--rise,0)); border:2px solid var(--mist);
+    background:transparent; font-size:0; position:relative; }
+  .stp .dot::after { content:""; position:absolute; right:-3px; bottom:5px; width:2px; height:24px; background:currentColor; transform:rotate(22deg); transform-origin:bottom; color:var(--mist); }
+  .stp.done .dot { background:var(--ink); border-color:var(--ink); }
+  .stp.done .dot::after { color:var(--ink); }
+  .stp.on { background:color-mix(in srgb,var(--gold) 18%,transparent); color:var(--ink); box-shadow:inset 0 0 0 1px var(--gold); }
+  .stp.on small { color:var(--mist); opacity:1; }
+  .stp.on .dot { background:var(--gold); border-color:var(--gold); box-shadow:0 0 0 5px color-mix(in srgb,var(--gold) 22%,transparent); animation:notePulse 1.8s ease-in-out infinite; }
+  .stp.on .dot::after { color:var(--gold); }
+  .stp.on.done .dot { background:var(--gold); color:inherit; }
+  @keyframes notePulse { 50% { box-shadow:0 0 0 9px color-mix(in srgb,var(--gold) 10%,transparent); } }
+  .stp .tx b::before { content:attr(data-mv); font-family:var(--serif); font-style:italic; font-weight:400; color:var(--gold-ink); margin-right:6px; font-size:14px; }
+  @media (max-width: 720px){ .stepper { padding-left:8px; } .stepper::before, .stepper::after { display:none; } }
+  @media (prefers-reduced-motion: reduce){ .stp.on .dot { animation:none; } }
+
+  /* movement numbers */
+  .sec-hd .num { font-family:var(--serif); font-style:italic; font-size:22px; line-height:1; padding:8px 14px 9px; min-width:46px; text-align:center; }
+  .sec-hd .eyebrow { font-style:normal; }
+  .tempo-it { font-family:var(--serif); font-style:italic; font-size:15px; letter-spacing:.02em; text-transform:none; color:var(--gold-ink); margin-right:6px; }
+
+  /* live keyboard under the stage */
+  .keys { position:relative; height:46px; margin-top:6px; border-radius:10px; overflow:hidden; display:flex; border:1px solid var(--line-2);
+    background:var(--card-2); backdrop-filter:blur(6px); }
+  .keys .w { flex:1 1 0; border-right:1px solid var(--line-2); position:relative; background:#fdfbf6; transition:background .06s; }
+  [data-theme="dark"] .keys .w { background:#1b1e30; }
+  .keys .b { position:absolute; top:0; height:60%; border-radius:0 0 3px 3px; background:color-mix(in srgb,var(--ink) 78%,transparent); z-index:2; transition:background .06s; }
+  [data-theme="dark"] .keys .b { background:#05060b; border:1px solid var(--line-2); border-top:none; }
+  .keys .sc::after { content:""; position:absolute; left:50%; bottom:5px; width:4px; height:4px; margin-left:-2px; border-radius:50%; background:var(--gold); opacity:.7; }
+  .keys .b.sc::after { bottom:4px; }
+  .keys .tonic::after { width:6px; height:6px; margin-left:-3px; opacity:1; }
+  .keys .lit { box-shadow:0 0 14px var(--lit); }
+  .keys .c-lab { position:absolute; bottom:2px; left:2px; font-size:8px; color:var(--faint); font-family:"JetBrains Mono",monospace; }
+
+  /* equaliser bars instead of a spinner */
+  .ai-status .spin, .eq { width:14px; height:12px; border:none !important; border-radius:0; animation:none; position:relative; display:inline-block;
+    background:linear-gradient(var(--gold),var(--gold)) 0 100%/3px 40% no-repeat, linear-gradient(var(--gold),var(--gold)) 5px 100%/3px 80% no-repeat,
+      linear-gradient(var(--gold),var(--gold)) 10px 100%/3px 55% no-repeat; animation:eq .9s ease-in-out infinite; }
+  @keyframes eq {
+    0%,100% { background-size:3px 40%,3px 80%,3px 55%; }
+    33% { background-size:3px 90%,3px 35%,3px 70%; }
+    66% { background-size:3px 60%,3px 95%,3px 30%; } }
+
+  /* home: a faint clef and staff behind the headline */
+  .landing-in { position:relative; }
+  .clef-mark { position:absolute; right:2%; top:4%; font-size:clamp(220px,32vw,460px); line-height:1; color:var(--gold-ink); opacity:.07; pointer-events:none;
+    font-family:"Segoe UI Symbol","Noto Music","Apple Symbols",serif; }
+  .landing::after { content:""; position:absolute; left:0; right:0; top:22%; height:120px; pointer-events:none; opacity:.8;
+    background:repeating-linear-gradient(to bottom,var(--staff) 0,var(--staff) 1px,transparent 1px,transparent 30px);
+    mask-image:linear-gradient(90deg,transparent,#000 20%,#000 80%,transparent); }
+  .door-ico { display:inline-flex; gap:2px; align-items:flex-end; }
+  .door:hover .door-ico { animation:hop .5s ease; }
+  @keyframes hop { 40% { transform:translateY(-6px) rotate(-6deg); } }
+
+  /* interface sounds toggle */
+  .snd-btn { width:34px; height:34px; border-radius:50%; border:1px solid var(--line-2); background:var(--card-2); color:var(--gold-ink); cursor:pointer; font-size:15px; }
+  .snd-btn[aria-pressed="false"] { color:var(--faint); text-decoration:line-through; }
+
+  /* game: results on a staff */
+  .g-dots { gap:14px; padding:8px 0; }
+  .g-dots i { width:16px; height:12px; border-radius:50%; transform:rotate(-22deg); position:relative; }
+  .g-dots i::after { content:""; position:absolute; right:-1px; bottom:5px; width:2px; height:20px; background:inherit; transform:rotate(22deg); transform-origin:bottom; }
+  .g-final .g-dots { background:repeating-linear-gradient(to bottom,transparent 0,transparent 5px,var(--staff) 5px,var(--staff) 6px); max-width:260px; margin-left:auto; margin-right:auto; }
 </style>
 </head>
 <body>
@@ -751,6 +831,7 @@
     </div>
     <div class="hdr-right">
       <a class="tag" id="pointsTag" href="#/game/wallet" title="Your points wallet" style="border-color:var(--gold);color:var(--gold-ink);text-decoration:none">🪙 0 pts</a>
+      <button class="snd-btn" id="sndBtn" type="button" aria-pressed="true" title="Interface sounds">♪</button>
       <div class="seg" id="themeSeg" role="group" aria-label="Colour theme">
         <button type="button" data-theme-choice="auto"  title="Follow the system setting">Auto</button>
         <button type="button" data-theme-choice="light" title="Light theme">☀</button>
@@ -768,6 +849,7 @@
   <canvas id="heroCv" aria-hidden="true"></canvas>
   <div class="wrap landing-in">
     <div class="kicker reveal"><span class="pulse-dot"></span> Live data · Yahoo Finance · 50+ exchanges worldwide</div>
+    <span class="clef-mark" aria-hidden="true">𝄞</span>
     <h1 class="headline reveal">Hear the <em>market</em><br/>sing.</h1>
     <p class="lede reveal">
       Market Sonata composes an original song from any stock, index, currency or coin.
@@ -794,7 +876,7 @@
       <div class="kpi"><b data-count="20218">0</b><span>US stocks</span></div>
       <div class="kpi"><b data-count="7468">0</b><span>China A-shares</span></div>
       <div class="kpi"><b data-count="9288">0</b><span>Hong Kong listings</span></div>
-      <div class="kpi"><b data-count="155410">0</b><span>mutual funds</span></div>
+      <div class="kpi"><b data-count="5">0</b><span>musical styles</span></div>
       <div class="kpi"><b data-count="41">0</b><span>markets worldwide</span></div>
     </div>
   </div>
@@ -809,7 +891,7 @@
 
   <!-- ======================= 02 COMPOSE ======================= -->
   <section class="sec panel" id="compose" data-panel="compose">
-    <div class="sec-hd"><span class="num">02</span><div><div class="eyebrow">Set up the piece</div><h2 class="h2">Compose</h2></div>
+    <div class="sec-hd"><span class="num">II</span><div><div class="eyebrow">Moderato · set up the piece</div><h2 class="h2">Compose</h2></div>
       <p class="sec-sub">Choose the time window and a musical style. The blueprint shows how this market's data turns into music before you listen.</p></div>
     <div class="compose-grid">
       <div class="card cp-market">
@@ -863,7 +945,7 @@
 
   <!-- ======================= 06 COLLECTION ======================= -->
   <section class="sec panel" id="collection" data-panel="collection">
-    <div class="sec-hd"><span class="num">06</span><div><div class="eyebrow">Your library</div><h2 class="h2">Collection</h2></div>
+    <div class="sec-hd"><span class="num">VI</span><div><div class="eyebrow">Repertoire · your library</div><h2 class="h2">Collection</h2></div>
       <p class="sec-sub">Songs you've saved. Reopen any of them, or tick two to compare how their markets and their music differ.</p></div>
     <div class="card" id="cmpCard" hidden>
       <div class="card-hd"><div><div class="eyebrow">Side by side</div><h3 class="h3">Compare</h3></div><button class="btn-ghost" id="cmpClear">Clear selection</button></div>
@@ -874,7 +956,7 @@
 
   <!-- ======================= 03 LISTEN ======================= -->
   <section class="sec panel" id="listen" data-panel="listen">
-    <div class="sec-hd reveal"><span class="num">03</span><div><div class="eyebrow">Now playing</div><h2 class="h2">Listen</h2></div></div>
+    <div class="sec-hd reveal"><span class="num">III</span><div><div class="eyebrow" id="tempoMark">Now playing</div><h2 class="h2">Listen</h2></div></div>
 
     <div class="stage reveal" id="stage">
       <canvas id="stageCv" aria-hidden="true"></canvas>
@@ -905,6 +987,7 @@
           </div>
         </div>
         <div class="form-strip" id="formStrip" aria-label="Song sections — click to jump"></div>
+        <div class="keys" id="keys" aria-hidden="true"></div>
       </div>
       <div class="stage-tip" id="stageTip" hidden></div>
     </div>
@@ -913,7 +996,7 @@
 
   <!-- ======================= 01 CHOOSE ======================= -->
   <section class="sec panel" id="explore" data-panel="explore">
-    <div class="sec-hd reveal"><span class="num">01</span><div><div class="eyebrow">Market explorer</div><h2 class="h2">Choose what to listen to</h2></div>
+    <div class="sec-hd reveal"><span class="num">I</span><div><div class="eyebrow">Preludio · market explorer</div><h2 class="h2">Choose what to listen to</h2></div>
       <p class="sec-sub">Every stock, ETF and fund Yahoo Finance lists — by country, sector and move — plus live movers and hand-picked collections.</p></div>
 
     <div class="card explorer reveal">
@@ -925,7 +1008,6 @@
         <div class="seg" id="uniType" role="group" aria-label="Instrument type">
           <button type="button" data-t="EQUITY" class="on">Stocks</button>
           <button type="button" data-t="ETF">ETFs</button>
-          <button type="button" data-t="MUTUALFUND">Mutual funds</button>
         </div>
         <select id="uniSector" aria-label="Sector"><option value="">All sectors</option></select>
         <select id="uniSort" aria-label="Sort">
@@ -947,7 +1029,7 @@
             <button type="button" data-sort="up">▲ Top</button>
             <button type="button" data-sort="down">▼ Bottom</button>
           </div>
-          <input id="exFilter" placeholder="Filter this page…" aria-label="Filter this list" />
+          <input id="exFilter" placeholder="Find a stock, ETF, coin…" aria-label="Filter this list or search all of Yahoo" />
         </div>
       </div>
       <div class="ex-count"><span class="badge" id="exCount"></span></div>
@@ -967,7 +1049,7 @@
 
   <!-- ======================= 03 SCORE ======================= -->
   <section class="sec panel" id="score" data-panel="score">
-    <div class="sec-hd reveal"><span class="num">04</span><div><div class="eyebrow">The music & the data</div><h2 class="h2">Read the score</h2></div></div>
+    <div class="sec-hd reveal"><span class="num">IV</span><div><div class="eyebrow">Partitura · the music & the data</div><h2 class="h2">Read the score</h2></div></div>
     <div class="grid">
       <div class="card empty full" id="emptyState">
         <div>
@@ -1030,7 +1112,7 @@
 
   <!-- ======================= 04 STORY ======================= -->
   <section class="sec panel" id="story" data-panel="story">
-    <div class="sec-hd reveal"><span class="num">05</span><div><div class="eyebrow">Programme note</div><h2 class="h2">The story behind the song</h2></div>
+    <div class="sec-hd reveal"><span class="num">V</span><div><div class="eyebrow">Programme note</div><h2 class="h2">The story behind the song</h2></div>
       <p class="sec-sub">Press <b>✦ Write with AI</b> and Claude writes it from the real price history and the finished score — pick a voice, a language, or ask for something specific.</p></div>
 
     <div class="grid">
@@ -1175,7 +1257,7 @@
   <!-- ======================= LAYER 2 · HOW IT WORKS ======================= -->
   <div class="screen" data-screen="how">
   <section class="sec" id="how">
-    <div class="sec-hd reveal"><span class="num">i</span><div><div class="eyebrow">Method</div><h2 class="h2">How a chart becomes a song</h2></div></div>
+    <div class="sec-hd reveal"><span class="num">𝄞</span><div><div class="eyebrow">Method</div><h2 class="h2">How a chart becomes a song</h2></div></div>
     <div class="steps">
       <div class="step reveal"><span class="step-n">i</span><h4>Read the market</h4><p>Daily, hourly or monthly bars from Yahoo Finance are cut into twelve chapters. Each chapter gets a shape, a momentum, a volatility and a level of participation.</p></div>
       <div class="step reveal"><span class="step-n">ii</span><h4>Find the mood</h4><p>The overall trend chooses the modal family — bright, dark or ambiguous. Volatility sets the tempo and how dissonant the chords get; volume sets how hard the band plays.</p></div>
@@ -2246,7 +2328,7 @@ async function getSeries(sym){
 async function doCompose(){
   const sym=$("symbol").value.trim().toUpperCase()||"AAPL";
   $("symbol").value=sym; syncChips();
-  $("composeBtn").disabled=true; $("composeBtn").textContent="Composing…";
+  $("composeBtn").disabled=true; $("composeBtn").textContent="Tuning up…";
   $("stage").classList.add("busy");
   try{
     const series=await getSeries(sym);
@@ -2802,7 +2884,7 @@ function rememberRecent(sym,name){
   saveJSON(RECENT_KEY,list.slice(0,24));
   if(ex.tab==="recent") showSub(ex.sub,true);
 }
-const ex={tabs:[],tab:null,sub:null,rows:[],sort:"default",filter:"",count:50,seq:0};
+const ex={tabs:[],tab:null,sub:null,rows:[],sort:"default",filter:"",count:50,seq:0,found:[],searching:false,searched:false};
 function scr(id,label,count=50){ return {id:"scr:"+id,label,kind:"screener",scr:id,count}; }
 function buildTabs(groups){
   const g=id=>{ const x=groups.find(c=>c.id===id); return x?{id:"cat:"+id,label:x.label,kind:"list",items:x.items}:null; };
@@ -2811,8 +2893,7 @@ function buildTabs(groups){
     {id:"movers",label:"🔥 Movers",subs:[scr("day_gainers","Gainers"),scr("day_losers","Losers"),scr("most_actives","Most active"),
       {id:"trending",label:"Trending",kind:"trending"},scr("small_cap_gainers","Small-cap gainers")]},
     {id:"us",label:"US stocks",subs:[g("tech"),g("finance"),g("health"),g("consumer"),g("industrial"),g("china_adr")]},
-    {id:"funds",label:"ETFs & funds",subs:[g("etf"),scr("top_mutual_funds","Top mutual funds"),scr("portfolio_anchors","Portfolio anchors"),
-      scr("solid_large_growth_funds","Large growth funds"),scr("high_yield_bond","High-yield bonds"),scr("conservative_foreign_funds","Foreign funds")]},
+    {id:"funds",label:"ETFs",subs:[g("etf")]},
     {id:"indices",label:"Indices",subs:[g("indices")]},
     {id:"crypto",label:"Crypto & FX",subs:[g("crypto"),scr("all_cryptocurrencies_us","Top 100 crypto",100),g("fx")]},
     {id:"cmd",label:"Commodities & rates",subs:[g("commodities"),g("rates")]},
@@ -2853,20 +2934,57 @@ function paintTiles(){
     const k=r=>(r.change_pct==null||!isFinite(r.change_pct))?null:r.change_pct;
     rows.sort((a,b)=>{ const x=k(a),y=k(b); if(x==null)return 1; if(y==null)return -1; return ex.sort==="up"?y-x:x-y; });
   }
-  $("tiles").innerHTML=rows.length?rows.map(tileHTML).join("")
-    :`<div class="badge" style="grid-column:1/-1;padding:18px 4px">${ex.sub&&ex.sub.kind==="recent"?"Nothing composed yet — pick any market.":"No markets match."}</div>`;
+  // The filter box narrows this page AND searches all of Yahoo: matches that
+  // aren't on this page are listed underneath, so a stock can always be found.
+  const msg=t=>`<div class="badge ex-div">${t}</div>`;
+  let html=rows.length?rows.map(tileHTML).join("")
+    :f?msg(`Nothing on this list matches “${esc(ex.filter.trim())}”.`)
+    :msg(ex.sub&&ex.sub.kind==="recent"?"Nothing composed yet — pick any market.":"No markets match.");
+  if(f){
+    const extra=ex.found.filter(r=>!rows.some(x=>x.symbol===r.symbol));
+    html+=ex.searching&&!extra.length?msg(`<span class="eq"></span> Searching all of Yahoo Finance for “${esc(ex.filter.trim())}”…`)
+      :extra.length?msg(`From all of Yahoo Finance · ${extra.length} result${extra.length===1?"":"s"}`)+extra.map(tileHTML).join("")
+      :ex.searched?msg(`No other stocks, ETFs, indices, coins or currencies on Yahoo match “${esc(ex.filter.trim())}”.`):"";
+  }
+  $("tiles").innerHTML=html;
   $("tiles").querySelectorAll(".tile").forEach(t=>{
     t.onclick=e=>{
-      if(e.target.closest(".t-play")){ const row=ex.rows.find(r=>r.symbol===t.dataset.symbol); previewMelody(t.dataset.symbol,row&&row.closes,t); return; }
+      if(e.target.closest(".t-play")){ const row=ex.rows.concat(ex.found).find(r=>r.symbol===t.dataset.symbol); previewMelody(t.dataset.symbol,row&&row.closes,t); return; }
       pickSymbol(t.dataset.symbol,"#/studio/compose");
     };
     t.onkeydown=e=>{ if((e.key==="Enter"||e.key===" ")&&e.target===t){ e.preventDefault(); pickSymbol(t.dataset.symbol,"#/studio/compose"); } };
   });
   if(ex.sub&&ex.sub.kind==="universe"){
-    const what={EQUITY:"stocks",ETF:"ETFs",MUTUALFUND:"mutual funds"}[uni.type];
+    const what={EQUITY:"stocks",ETF:"ETFs"}[uni.type];
     $("exCount").textContent=`${uni.total.toLocaleString()} ${what} · showing ${(uni.page*UNI_PAGE+1).toLocaleString()}–${(uni.page*UNI_PAGE+ex.rows.length).toLocaleString()}`;
   }else $("exCount").textContent=`${rows.length} market${rows.length===1?"":"s"}`;
+  if(f) $("exCount").textContent=`${rows.length} on this list · ${ex.found.filter(r=>!rows.some(x=>x.symbol===r.symbol)).length} more on Yahoo`;
   syncChips();
+}
+// Yahoo-wide search behind the filter box (debounced, latest query wins).
+let exSearchSeq=0, exSearchTimer=null;
+async function exSearch(q){
+  const seq=++exSearchSeq;
+  ex.searching=true; ex.searched=false; paintTiles();
+  try{
+    const res=await fetch(`${API_BASE}/api/search?q=${encodeURIComponent(q)}`);
+    const d=res.ok?await res.json():{results:[]};
+    if(seq!==exSearchSeq) return;
+    ex.found=(d.results||[]).map(r=>{ if(r.name) nameCache[r.symbol]=r.name; return {symbol:r.symbol,name:r.name}; });
+    ex.searching=false; ex.searched=true; paintTiles();
+    const syms=ex.found.map(r=>r.symbol); if(!syms.length) return;
+    const sp=await (await fetch(`${API_BASE}/api/spark?symbols=${encodeURIComponent(syms.join(","))}&range=1mo&interval=1d`)).json();
+    if(seq!==exSearchSeq) return;
+    ex.found.forEach(r=>{
+      const x=(sp.quotes||{})[r.symbol]; if(!x) return;
+      r.closes=x.closes; r.price=x.price;
+      if(x.closes&&x.closes.length>1){ const a=x.closes[x.closes.length-2], b=x.closes[x.closes.length-1]; r.change_pct=a?(b/a-1)*100:null; }
+    });
+    paintTiles();
+  }catch(e){
+    if(seq!==exSearchSeq) return;
+    ex.searching=false; ex.searched=true; paintTiles();
+  }
 }
 // Merge one-month sparklines (and, for curated lists, today's move) into the rows.
 async function fillSpark(seq){
@@ -2909,7 +3027,7 @@ async function showSub(sub,keepCount){
       const pages=Math.max(1,Math.ceil(uni.total/UNI_PAGE));
       $("uniPage").textContent=`page ${(uni.page+1).toLocaleString()} / ${pages.toLocaleString()}`;
       $("uniPrev").disabled=uni.page<=0; $("uniNext").disabled=uni.page>=pages-1;
-      const what={EQUITY:"stocks",ETF:"ETFs",MUTUALFUND:"mutual funds"}[uni.type];
+      const what={EQUITY:"stocks",ETF:"ETFs"}[uni.type];
       $("exNote").textContent=`${uni.total.toLocaleString()} ${what} · ${UNI_REGIONS[uni.region]||uni.region}${uni.sector&&uni.type==="EQUITY"?" · "+uni.sector:""} · every listing on Yahoo Finance · change: today`;
       paintTiles();
       $("exCount").textContent=`${uni.total.toLocaleString()} ${what} · showing ${(uni.page*UNI_PAGE+1).toLocaleString()}–${(uni.page*UNI_PAGE+ex.rows.length).toLocaleString()}`;
@@ -2962,6 +3080,7 @@ const UNI_PAGE=100;
 let UNI_REGIONS={us:"United States"};
 const uni={region:"us",type:"EQUITY",sector:"",sort:"size:desc",main:true,page:0,total:0};
 try{ Object.assign(uni,JSON.parse(localStorage.getItem("ms-uni")||"{}"),{page:0}); }catch(e){}
+if(uni.type!=="EQUITY"&&uni.type!=="ETF") uni.type="EQUITY";   // mutual funds were removed
 function saveUni(){ try{ localStorage.setItem("ms-uni",JSON.stringify({region:uni.region,type:uni.type,sector:uni.sector,sort:uni.sort,main:uni.main})); }catch(e){} }
 function reloadUni(){ uni.page=0; saveUni(); paintUniBar(); if(ex.tab==="all") showSub(ex.sub); }
 function paintUniBar(){
@@ -2987,7 +3106,17 @@ $("uniType").querySelectorAll("button").forEach(b=>b.onclick=()=>{ uni.type=b.da
 $("uniPrev").onclick=()=>{ if(uni.page>0){ uni.page--; showSub(ex.sub,true); $("explore").scrollIntoView({behavior:"smooth"}); } };
 $("uniNext").onclick=()=>{ uni.page++; showSub(ex.sub,true); $("explore").scrollIntoView({behavior:"smooth"}); };
 $("exMore").onclick=()=>{ ex.count=Math.min(250,ex.count+50); showSub(ex.sub,true); };
-$("exFilter").addEventListener("input",e=>{ ex.filter=e.target.value; paintTiles(); });
+$("exFilter").addEventListener("input",e=>{
+  ex.filter=e.target.value; const q=ex.filter.trim();
+  clearTimeout(exSearchTimer); exSearchSeq++;
+  ex.found=[]; ex.searching=!!q; ex.searched=false; paintTiles();
+  if(q) exSearchTimer=setTimeout(()=>exSearch(q),280);
+});
+$("exFilter").addEventListener("keydown",e=>{
+  if(e.key!=="Enter") return;
+  const first=$("tiles").querySelector(".tile");   // Enter opens the top match
+  if(first){ e.preventDefault(); pickSymbol(first.dataset.symbol,"#/studio/compose"); }
+});
 $("exSort").querySelectorAll("button").forEach(b=>b.onclick=()=>{
   ex.sort=b.dataset.sort; $("exSort").querySelectorAll("button").forEach(x=>x.classList.toggle("on",x===b)); paintTiles();
 });
@@ -3207,12 +3336,17 @@ const ROUTES={
   game:  {label:"Game mode", panels:{lobby:"Lobby",tutorial:"How to play",play:"Play",shop:"Rewards shop",wallet:"My wallet"}, def:"lobby"},
   how:   {label:"How it works"},
 };
-const LEGACY_HASH={listen:"#/studio/listen",explore:"#/studio/explore",score:"#/studio/score",story:"#/studio/story",play:"#/game/play",how:"#/how",top:"#/"};
 let route={screen:"home",panel:null};
+// Only "#/…" routes navigate. Anything else (an old one-page anchor like
+// "#how" from a bookmark, or a stray hash) opens Home and is cleared from the
+// address bar, so the site never starts somewhere unexpected.
 function parseHash(){
-  const h=(location.hash||"").replace(/^#\/?/,"");
-  if(LEGACY_HASH[h]) return parseHashStr(LEGACY_HASH[h]);
-  return parseHashStr("#/"+h);
+  const h=location.hash||"";
+  if(h&&!h.startsWith("#/")){
+    try{ history.replaceState(null,"",location.pathname+location.search); }catch(e){}
+    return {screen:"home",panel:null};
+  }
+  return parseHashStr(h||"#/");
 }
 function parseHashStr(s){
   const [scr,pan]=s.replace(/^#\/?/,"").split("/");
@@ -3741,6 +3875,8 @@ function answer(i){
   if(game.score>bestScore()) saveJSON(BEST_KEY,game.score);
   paintHud(true);
   renderBoosts();
+  // a major arpeggio for "in tune", a semitone clash for "off-key"
+  if(ok) chime([0,2,4,7],{force:true,gap:.08,vol:-16}); else chime([60,61],{raw:true,force:true,gap:0,dur:.6,vol:-18});
   $("gBonus").textContent=ok?`+${pts}`:"+0";
   $("gBody").querySelectorAll(".g-card").forEach((b,j)=>{
     const o=r.opts[j], ret=o.feat.totalReturn*100, cls=ret>=0?"up":"down";
@@ -3752,8 +3888,8 @@ function answer(i){
   });
   const t=r.opts[r.answer], last=game.round>=GAME_ROUNDS;
   $("gAfter").innerHTML=`<div class="g-result">
-    <div class="big ${ok?"up":"down"}">${ok?"✓ +"+pts:"✗ 0"}</div>
-    <p>${ok?`Right! 100 + ${bonus} speed${streakBonus?` + ${streakBonus} streak`:""}${doubled?`, doubled ⚡`:""}. `:`Not this time. It was chart <b>${"ABC"[r.answer]}</b>.${shielded?" 🛡 Your streak is safe.":""} `}${explain(r.score,t.feat)}</p>
+    <div class="big ${ok?"up":"down"}">${ok?"♪ +"+pts:"♭ 0"}</div>
+    <p>${ok?`<b>In tune!</b> 100 + ${bonus} speed${streakBonus?` + ${streakBonus} streak`:""}${doubled?`, doubled ⚡`:""}. `:`<b>Off-key.</b> It was chart <b>${"ABC"[r.answer]}</b>.${shielded?" 🛡 Your streak is safe.":""} `}${explain(r.score,t.feat)}</p>
     <div style="display:flex;gap:8px;flex-wrap:wrap">
       <button class="btn-ghost" id="gOpen">Open ${esc(t.series.symbol)} in the player</button>
       <button class="primary" id="gNext">${last?"See results":"Next round →"}</button>
@@ -3780,7 +3916,10 @@ function gameOver(){
     <p>Everything in the rewards shop is now ${Math.round(tierAfter.off*100)}% off, and new vouchers are unlocked.</p>
     <div class="modal-actions"><button class="btn-ghost" data-close>Later</button><a class="primary sm" href="#/game/shop" onclick="document.getElementById('modal').hidden=true">Open the shop</a></div>`),600);
   const cheapest=SHOP.filter(s=>s.cat==="boost").map(s=>priceFor(s,after)).sort((a,b)=>a-b)[0];
+  const TITLES=["Keep practising","Warming up","Finding the key","Encore!","Bravo!","Standing ovation!"];
+  chime(right>=4?[0,2,4,7,9,11,14]:right>=2?[0,2,4,7]:[0,2,1],{force:true,gap:.09,vol:-16});
   $("gBody").innerHTML=`<div class="g-final">
+    <h3 class="h3" style="margin-bottom:8px">${TITLES[Math.min(right,TITLES.length-1)]}</h3>
     <div class="eyebrow">Final score</div>
     <div class="big gold">${game.score.toLocaleString()}</div>
     <div class="g-dots">${game.results.map(ok=>`<i class="${ok?"ok":"no"}"></i>`).join("")}</div>
@@ -3851,19 +3990,20 @@ function styleOf(id){ return STYLES[id]||STYLES.pop; }
 if(!styleUnlocked(studioStyle)) studioStyle="pop";
 
 const STUDIO_STEPS=[
-  {phase:"Set up",id:"explore",label:"Choose",st:()=>current?{done:true,t:`${current.series.symbol}${nameCache[current.series.symbol]?" · "+nameCache[current.series.symbol]:""}`}:{t:"pick a market"}},
+  {phase:"Prelude · set up",id:"explore",label:"Choose",st:()=>current?{done:true,t:`${current.series.symbol}${nameCache[current.series.symbol]?" · "+nameCache[current.series.symbol]:""}`}:{t:"pick a market"}},
   {id:"compose",label:"Compose",st:()=>current?{done:true,t:`${styleOf(current.score.style).ico} ${styleOf(current.score.style).name} · ${Math.round(current.score.tempo)} BPM`}:{t:"window & style"}},
-  {phase:"Experience",id:"listen",label:"Listen",st:()=>studio.listened>=0.9?{done:true,t:"heard it all"}:studio.listened>0.02?{t:`heard ${Math.round(studio.listened*100)}%`}:{t:"not played yet"}},
+  {phase:"Performance",id:"listen",label:"Listen",st:()=>studio.listened>=0.9?{done:true,t:"heard it all"}:studio.listened>0.02?{t:`heard ${Math.round(studio.listened*100)}%`}:{t:"not played yet"}},
   {id:"score",label:"Score",st:()=>studio.scoreSeen?{done:true,t:"explored"}:{t:"piano roll & charts"}},
-  {phase:"Go further",id:"story",label:"Story",st:()=>(noteIsAi&&noteFor===noteKey())?{done:true,t:"AI note written"}:{t:"draft note"}},
+  {phase:"Encore · go further",id:"story",label:"Story",st:()=>(noteIsAi&&noteFor===noteKey())?{done:true,t:"AI note written"}:{t:"draft note"}},
   {id:"collection",label:"Collection",st:()=>{ const n=library().length; return isSaved()?{done:true,t:`saved · ${n} in library`}:{t:n?`${n} saved`:"nothing saved yet"}; }},
 ];
+const ROMAN=["","I","II","III","IV","V","VI"];
 function paintStepper(){
   const el=$("studioTabs"); if(!el) return;
   const phases=[]; STUDIO_STEPS.forEach((s,i)=>{ if(s.phase) phases.push({name:s.phase,steps:[]}); phases[phases.length-1].steps.push({...s,n:i+1}); });
   el.innerHTML=phases.map(ph=>`<div class="phase"><span class="phase-l">${ph.name}</span><div class="phase-steps">${ph.steps.map(s=>{
       const st=s.st(), on=route.screen==="studio"&&route.panel===s.id;
-      return `<a class="stp${on?" on":""}${st.done?" done":""}" href="#/studio/${s.id}"${on?' aria-current="step"':""}><span class="dot">${st.done?"✓":s.n}</span><span class="tx"><b>${s.label}</b><small>${esc(st.t)}</small></span></a>`;
+      return `<a class="stp${on?" on":""}${st.done?" done":""}" href="#/studio/${s.id}" data-step="${s.n}"${on?' aria-current="step"':""} title="${st.done?"done":"to do"}"><span class="dot" style="--rise:${(3.5-s.n)*1.6}px"></span><span class="tx"><b data-mv="${ROMAN[s.n]}">${s.label}</b><small>${esc(st.t)}</small></span></a>`;
     }).join("")}</div></div>`).join("")+`<a class="stp-cta" href="#/game">🎮 Game mode</a>`;
 }
 // What to do next, written for the state you're actually in.
@@ -4065,6 +4205,93 @@ setInterval(()=>{
   if(playing&&current){ studio.listened=Math.max(studio.listened,rollProgress); if(route.screen==="studio"){ paintStepper(); if(route.panel==="listen") renderNextHint("listen"); } }
 },1000);
 applyStyleInstruments(studioStyle);
+
+/* ===================== the musical layer ===================== */
+// Tempo marking from the real BPM, a live keyboard that lights the notes as
+// they sound (coloured by voice, honouring the mixer), and interface sounds
+// tuned to the key of whatever song is loaded.
+const TEMPO_MARKS=[[60,"Largo"],[76,"Adagio"],[96,"Andante"],[112,"Moderato"],[132,"Allegro"],[168,"Vivace"],[1e9,"Presto"]];
+function tempoMark(bpm){ return TEMPO_MARKS.find(([lim])=>bpm<lim)[1]; }
+
+let keyEls={}, keyLit=new Map();
+const BLACK_PC=[1,3,6,8,10];
+function buildKeys(){
+  const el=$("keys"); if(!el) return;
+  keyEls={}; keyLit=new Map();
+  if(!current){ el.innerHTML=""; return; }
+  const pitched=current.score.notes.filter(n=>PITCHED.includes(n.voice)).map(n=>n.pitch);
+  if(!pitched.length){ el.innerHTML=""; return; }
+  const lo=Math.floor(Math.min(...pitched)/12)*12;
+  let hi=Math.ceil((Math.max(...pitched)+1)/12)*12-1; if(hi-lo<35) hi=lo+35;   // at least three octaves
+  const whites=[]; for(let p=lo;p<=hi;p++) if(!BLACK_PC.includes(p%12)) whites.push(p);
+  const ww=100/whites.length, root=NOTE_NAMES.indexOf(current.score.keyName), scale=SCALES[current.score.mode]||SCALES.major;
+  const cls=p=>(scale.includes(((p%12)-root+12)%12)?" sc":"")+((p%12)===root?" tonic":"");
+  let html=whites.map(p=>`<div class="w${cls(p)}" data-p="${p}">${p%12===0?`<span class="c-lab">C${p/12-1}</span>`:""}</div>`).join("");
+  for(let p=lo;p<=hi;p++) if(BLACK_PC.includes(p%12)){
+    const wi=whites.findIndex(w=>w>p);
+    html+=`<div class="b${cls(p)}" data-p="${p}" style="left:${(wi-0.3)*ww}%;width:${ww*0.6}%"></div>`;
+  }
+  el.innerHTML=html;
+  el.querySelectorAll("[data-p]").forEach(k=>{ keyEls[k.dataset.p]=k; });
+  el.title=`${current.score.keyName} ${current.score.mode}: dots mark the notes of the scale`;
+}
+const VOICE_PRI={melody:3,arp:2,bass:1,pad:0};
+function lightKeys(beat){
+  const now=new Map();
+  if(current&&beat>=0) for(const n of current.score.notes){
+    if(beat<n.start||beat>=n.start+n.duration||!PITCHED.includes(n.voice)||isMuted(n.voice)) continue;
+    const prev=now.get(n.pitch); if(!prev||VOICE_PRI[n.voice]>VOICE_PRI[prev]) now.set(n.pitch,n.voice);
+  }
+  keyLit.forEach((v,p)=>{ if(!now.has(p)){ const k=keyEls[p]; if(k){ k.style.background=""; k.classList.remove("lit"); } } });
+  now.forEach((v,p)=>{ if(keyLit.get(p)!==v){ const k=keyEls[p]; if(k){ const col=css("--v-"+v); k.style.background=col; k.style.setProperty("--lit",col); k.classList.add("lit"); } } });
+  keyLit=now;
+}
+(function keysLoop(){
+  requestAnimationFrame(keysLoop);
+  if(document.hidden) return;
+  if(playing&&current&&route.panel==="listen") lightKeys(rollProgress*current.score.totalBeats);
+  else if(keyLit.size) lightKeys(-1);
+})();
+function paintTempoMark(){
+  if(!current) return;
+  const bpm=Math.round(current.score.tempo), S=styleOf(current.score.style);
+  $("tempoMark").innerHTML=`<span class="tempo-it">${tempoMark(bpm)}</span>♩ = ${bpm} · ${S.ico} ${S.name} · now playing`;
+}
+
+/* ---------- interface sounds, in the key of the loaded song ---------- */
+let uiSound=loadJSON("ms-ui-sound",true), uiSynth=null;
+function paintSnd(){ const b=$("sndBtn"); b.setAttribute("aria-pressed",String(!!uiSound)); b.title=uiSound?"Interface sounds: on":"Interface sounds: off"; }
+function degPitch(d){
+  const root=current?NOTE_NAMES.indexOf(current.score.keyName):0, scale=current?(SCALES[current.score.mode]||SCALES.major):SCALES.major;
+  const o=Math.floor(d/scale.length); return 72+root+12*o+scale[((d%scale.length)+scale.length)%scale.length];
+}
+async function chime(degs,opt={}){
+  const {gap=0.07,dur=0.4,vol=-22,raw=false,force=false}=opt;
+  if(!uiSound||typeof Tone==="undefined") return;
+  if(!force&&(playing||game.playing)) return;          // never talk over the music
+  try{ await Tone.start(); }catch(e){ return; }
+  if(!uiSynth) uiSynth=new Tone.PolySynth(Tone.Synth,{oscillator:{type:"sine"},envelope:{attack:.005,decay:.3,sustain:0,release:.7}}).toDestination();
+  uiSynth.volume.value=vol;
+  const t=Tone.now()+0.01;
+  degs.forEach((d,i)=>{ try{ uiSynth.triggerAttackRelease(Tone.Frequency(raw?d:degPitch(d),"midi").toFrequency(),dur,t+i*gap,0.6); }catch(e){} });
+}
+$("sndBtn").onclick=()=>{ uiSound=!uiSound; saveJSON("ms-ui-sound",uiSound); paintSnd(); chime([0,2,4],{gap:.08}); };
+paintSnd();
+// Each studio step is a scale degree: walking the path plays the scale.
+document.addEventListener("click",e=>{
+  const a=e.target.closest(".stp,.sub-tabs a,.door,.nav a,.path-step,#tutNext,#tutPrev,.sty,.tile,.lib-item [data-open]");
+  if(!a) return;
+  if(a.matches(".stp")) chime([+a.dataset.step-1]);
+  else if(a.matches(".door")) chime(a.classList.contains("game")?[0,2,4,7]:[0,4,7,11],{gap:.09});
+  else if(a.matches("#tutNext")) chime([tutStep,tutStep+2],{gap:.06});
+  else if(a.matches("#tutPrev")) chime([tutStep+1],{});
+  else if(a.matches(".sty")) chime([0,2,4,6],{gap:.06,dur:.3});
+  else chime([4],{dur:.3});
+},true);
+
+// Wire the musical layer into every render.
+const _renderStudio=render;
+render=function(){ _renderStudio(); buildKeys(); paintTempoMark(); };
 
 gameReady();
 paintHud();

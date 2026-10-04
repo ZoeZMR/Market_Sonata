@@ -45,16 +45,19 @@ produces the same piece, and the analyst can tell you *why* each choice was made
 ## ✦ Features
 
 - **Every market Yahoo lists** — an "All markets" browser pages through the full
-  universe by country/region (41 of them), type (stocks, ETFs, mutual funds) and
+  universe by country/region (41 of them), type (stocks, ETFs) and
   sector, sorted by size, today's move, volume or price — e.g. 20,000+ US stocks,
-  7,000+ China A-shares, 9,000+ Hong Kong listings, 155,000+ mutual funds.
+  7,000+ China A-shares, 9,000+ Hong Kong listings. Mutual funds are left out:
+  they report one NAV a day with no volume, and liquidated funds keep a frozen
+  price on Yahoo, which makes flat, misleading songs.
 - **Market explorer** — browse ~250 curated instruments (US sectors, ETFs,
   world indices, crypto, currencies, commodities, Treasury yields, China A-shares,
   Hong Kong, Japan, Europe) plus Yahoo's **live screeners** (gainers, losers, most
-  active, trending, most shorted, top crypto, funds…). Every tile shows today's
-  move and a one-month sparkline; filter and sort within any list.
-- **Search anything** — stocks, ETFs, indices, crypto, currencies, futures and
-  mutual funds by name or ticker (press `/` from anywhere).
+  active, trending, most shorted, top crypto…). Every tile shows today's
+  move and a one-month sparkline. The filter box narrows the current list and
+  also searches all of Yahoo for anything not on it.
+- **Search anything** — stocks, ETFs, indices, crypto, currencies and futures
+  by name or ticker (press `/` from anywhere).
 - **Any window, any bar size** — 1W … 10Y and MAX, or custom dates; bars from
   5-minute to monthly (Auto picks a sensible size and respects Yahoo's intraday
   history limits). A **shareable permalink** restores the exact selection.

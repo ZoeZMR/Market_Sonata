@@ -173,7 +173,7 @@ def screener(scr_id: str, count: int = Query(50, ge=1, le=250)):
 def universe(
     region: str = Query("us"),
     sector: str = Query(""),
-    type: str = Query("EQUITY", description="EQUITY | ETF | MUTUALFUND"),
+    type: str = Query("EQUITY", description="EQUITY | ETF"),
     sort: str = Query("size", description="size | percentchange | dayvolume | intradayprice"),
     order: str = Query("desc"),
     offset: int = Query(0, ge=0),
