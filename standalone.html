@@ -488,6 +488,241 @@
   .g-dots { display:flex; justify-content:center; gap:8px; margin:14px 0 22px; }
   .g-dots i { width:14px; height:14px; border-radius:50%; background:var(--line-2); }
   .g-dots i.ok { background:var(--good); } .g-dots i.no { background:var(--bad); }
+
+  /* =====================================================================
+     Layers: Home → Studio | Game mode → panels. One screen at a time,
+     routed by the URL hash (#/studio/score, #/game/shop, …).
+     ===================================================================== */
+  .screen { display:none; }
+  .screen.on { display:block; animation:screenIn .45s cubic-bezier(.2,.7,.2,1); }
+  .panel { display:none; padding-top:30px; }
+  .panel.on { display:block; animation:screenIn .35s cubic-bezier(.2,.7,.2,1); }
+  @keyframes screenIn { from { opacity:0; transform:translateY(14px); } }
+  @media (prefers-reduced-motion: reduce){ .screen.on, .panel.on { animation:none; } }
+  body:not(.at-home) .site-foot { margin-top:70px; }
+
+  .crumbs { max-width:1320px; margin:0 auto; padding:0 20px; display:flex; gap:8px; align-items:center; font-size:12px; color:var(--mist); }
+  .crumbs:empty { display:none; }
+  .crumbs { padding-top:8px; padding-bottom:8px; }
+  .crumbs a { color:var(--mist); text-decoration:none; }
+  .crumbs a:hover { color:var(--gold-ink); }
+  .crumbs b { color:var(--ink); font-weight:600; }
+  .crumbs .sep { color:var(--faint); }
+  .nav a.on { color:var(--ink); }
+
+  /* the two doors on the home screen */
+  .doors { display:grid; grid-template-columns:1fr 1fr; gap:16px; margin-top:34px; max-width:860px; }
+  @media (max-width: 720px){ .doors { grid-template-columns:1fr; } }
+  .door { position:relative; display:flex; flex-direction:column; gap:6px; padding:22px 22px 18px; border-radius:24px; text-decoration:none; color:var(--ink);
+    background:var(--card); border:1px solid var(--line-2); backdrop-filter:blur(10px); box-shadow:var(--shadow); transition:transform .2s, border-color .2s; }
+  .door:hover { transform:translateY(-4px); border-color:var(--gold); }
+  .door.game:hover { border-color:var(--violet); }
+  .door-ico { font-size:30px; }
+  .door-k { font-size:10px; letter-spacing:.24em; text-transform:uppercase; color:var(--mist); margin-top:4px; }
+  .door b { font-family:var(--serif); font-weight:400; font-size:38px; line-height:1; }
+  .door-d { font-size:14px; color:var(--mist); line-height:1.55; font-weight:300; }
+  .door-go { margin-top:8px; font-size:12px; letter-spacing:.12em; text-transform:uppercase; color:var(--gold-ink); font-weight:600; }
+  .door.game .door-go { color:var(--violet); }
+
+  /* second-level tabs (studio / game) */
+  .sub-tabs { position:sticky; top:var(--hdr-h,64px); z-index:30; display:flex; gap:6px; flex-wrap:wrap; align-items:center; margin-top:22px;
+    padding:6px; border-radius:999px; border:1px solid var(--line-2); background:color-mix(in srgb,var(--bg) 80%,transparent); backdrop-filter:blur(14px); }
+  .sub-tabs a { display:inline-flex; align-items:center; gap:8px; padding:9px 16px; border-radius:999px; font-size:13px; color:var(--mist); text-decoration:none; white-space:nowrap; transition:all .15s; }
+  .sub-tabs a:hover { color:var(--ink); background:var(--card-2); }
+  .sub-tabs a.on { background:var(--gold); color:var(--on-gold); font-weight:600; }
+  .sub-tabs.game a.on { background:var(--violet); color:#fff; }
+  .sub-tabs .n { font-family:"JetBrains Mono",monospace; font-size:10px; opacity:.7; }
+  .sub-tabs .sub-tabs-cta { margin-left:auto; border:1px dashed var(--line-2); }
+  @media (max-width: 720px){ .sub-tabs { border-radius:18px; position:static; } .sub-tabs .sub-tabs-cta { margin-left:0; } }
+  .panel-next { display:flex; justify-content:space-between; gap:10px; margin-top:28px; flex-wrap:wrap; }
+  .panel-next a { text-decoration:none; }
+
+  /* game mode gets its own accent */
+  body.game-mode .aurora i:nth-child(1){ background:color-mix(in srgb,var(--violet) 45%,var(--bg-a)); }
+  body.game-mode #pointsTag { border-color:var(--violet) !important; color:var(--violet) !important; font-weight:600; }
+
+  /* lobby */
+  .lobby { display:grid; grid-template-columns:minmax(0,1fr) minmax(0,1.4fr); gap:20px; }
+  @media (max-width: 900px){ .lobby { grid-template-columns:1fr; } }
+  .lw-pts { font-family:var(--serif); font-size:clamp(60px,8vw,96px); line-height:1; margin:8px 0 6px; font-variant-numeric:tabular-nums; }
+  .lw-pts small { font-family:Inter,sans-serif; font-size:14px; color:var(--mist); margin-left:8px; }
+  .tier { display:inline-flex; gap:8px; align-items:center; font-size:12px; font-weight:600; padding:5px 12px; border-radius:999px;
+    background:color-mix(in srgb,var(--violet) 16%,transparent); color:var(--violet); border:1px solid color-mix(in srgb,var(--violet) 40%,transparent); }
+  .tier-bar { height:6px; border-radius:999px; background:var(--line-2); overflow:hidden; margin:14px 0 6px; }
+  .tier-bar i { display:block; height:100%; width:0; background:linear-gradient(90deg,var(--violet),var(--gold)); transition:width .6s; }
+  .lw-stats { display:grid; grid-template-columns:repeat(3,1fr); gap:8px; margin-top:16px; }
+  .lw-stats .stat .v { font-size:18px; }
+  .lobby-path { display:flex; flex-direction:column; gap:10px; }
+  .path-step { display:flex; gap:16px; align-items:center; padding:16px 18px; border-radius:20px; text-decoration:none; color:var(--ink);
+    background:var(--card); border:1px solid var(--line); backdrop-filter:blur(10px); transition:transform .15s, border-color .15s; }
+  .path-step:hover { transform:translateX(4px); border-color:var(--violet); }
+  .path-step > div { flex:1; display:flex; flex-direction:column; gap:3px; }
+  .path-step > div span { font-size:13px; color:var(--mist); line-height:1.5; }
+  .ps-n { width:38px; height:38px; flex:0 0 auto; border-radius:50%; display:grid; place-items:center; font-family:var(--serif); font-size:20px;
+    color:var(--violet); border:1px solid var(--violet); }
+  .ps-st { font-size:11px; color:var(--mist); white-space:nowrap; }
+  .ps-st.done { color:var(--good); font-weight:600; }
+
+  /* tutorial */
+  .tut-dots { display:flex; gap:6px; margin-bottom:18px; }
+  .tut-dots button { flex:1; height:5px; border:none; border-radius:999px; background:var(--line-2); cursor:pointer; padding:0; }
+  .tut-dots button.on { background:var(--violet); }
+  .tut-dots button.seen { background:color-mix(in srgb,var(--violet) 45%,var(--line-2)); }
+  .tut-body { display:grid; grid-template-columns:1.1fr 1fr; gap:28px; align-items:center; min-height:300px; }
+  @media (max-width: 800px){ .tut-body { grid-template-columns:1fr; } }
+  .tut-body h3 { font-family:var(--serif); font-weight:400; font-size:clamp(32px,4vw,48px); line-height:1; margin:6px 0 14px; }
+  .tut-body p { color:var(--mist); line-height:1.7; margin:0 0 10px; }
+  .tut-body p b { color:var(--ink); }
+  .tut-vis { border-radius:20px; background:var(--card-2); border:1px solid var(--line); padding:18px; min-height:220px; display:flex; flex-direction:column; justify-content:center; gap:10px; }
+  .clue { display:grid; grid-template-columns:110px 1fr; gap:10px; align-items:center; font-size:13px; padding:8px 0; border-top:1px solid var(--line); }
+  .clue:first-child { border-top:none; }
+  .clue b { color:var(--gold-ink); }
+  .tut-nav { display:flex; justify-content:space-between; align-items:center; margin-top:22px; gap:10px; }
+  .pts-table { width:100%; border-collapse:collapse; font-size:13px; }
+  .pts-table td { padding:8px 0; border-top:1px solid var(--line); }
+  .pts-table td:last-child { text-align:right; font-family:"JetBrains Mono",monospace; color:var(--gold-ink); }
+
+  /* power-ups during a round */
+  .boosts { display:flex; gap:8px; flex-wrap:wrap; align-items:center; margin:14px 0 0; }
+  .boosts .lbl { font-size:10px; letter-spacing:.2em; text-transform:uppercase; color:var(--mist); margin-right:4px; }
+  .boost { font-family:inherit; font-size:12px; padding:7px 12px; border-radius:999px; cursor:pointer; color:var(--ink);
+    background:color-mix(in srgb,var(--violet) 14%,var(--card-2)); border:1px solid color-mix(in srgb,var(--violet) 45%,transparent); }
+  .boost:hover:not(:disabled) { border-color:var(--violet); }
+  .boost:disabled { opacity:.4; cursor:not-allowed; }
+  .boost.active { background:var(--violet); color:#fff; }
+  .boost .q { font-family:"JetBrains Mono",monospace; font-size:11px; opacity:.75; margin-left:4px; }
+  .g-card.eliminated { opacity:.25; filter:grayscale(1); pointer-events:none; }
+  .clue-box { margin-top:12px; padding:12px 14px; border-radius:14px; border:1px dashed var(--violet); font-size:13px; color:var(--mist); line-height:1.6; }
+  .clue-box b { color:var(--ink); }
+  .earned { margin:6px auto 18px; max-width:460px; padding:14px 18px; border-radius:18px; background:var(--card-2); border:1px solid var(--line-2); text-align:left; font-size:13px; }
+  .earned div { display:flex; justify-content:space-between; padding:4px 0; color:var(--mist); }
+  .earned div b { color:var(--gold-ink); font-family:"JetBrains Mono",monospace; }
+  .earned div.tot { border-top:1px solid var(--line-2); margin-top:6px; padding-top:8px; color:var(--ink); font-weight:600; }
+
+  /* shop */
+  .shop-bar { display:flex; gap:16px 22px; align-items:center; flex-wrap:wrap; padding:14px 18px; margin-bottom:16px; }
+  .shop-bar .seg { margin-left:auto; }
+  .shop-grid { display:grid; grid-template-columns:repeat(auto-fill,minmax(250px,1fr)); gap:14px; }
+  .item { display:flex; flex-direction:column; gap:8px; padding:18px; border-radius:22px; background:var(--card); border:1px solid var(--line); backdrop-filter:blur(10px); }
+  .item .ico { font-size:34px; }
+  .item h4 { margin:0; font-size:17px; }
+  .item p { margin:0; color:var(--mist); font-size:13px; line-height:1.55; flex:1; }
+  .item .meta { display:flex; gap:6px; flex-wrap:wrap; }
+  .item .price { display:flex; align-items:baseline; gap:8px; margin-top:4px; }
+  .item .price b { font-family:"JetBrains Mono",monospace; font-size:20px; color:var(--gold-ink); }
+  .item .price s { color:var(--faint); font-size:12px; }
+  .item .own { font-size:11px; color:var(--mist); }
+  .item button { margin-top:6px; }
+  .item.locked { opacity:.6; }
+
+  /* coupons + ledger */
+  .coupons { display:flex; flex-direction:column; gap:10px; }
+  .coupon { display:grid; grid-template-columns:auto 1fr auto; gap:14px; align-items:center; padding:14px 16px; border-radius:18px; position:relative;
+    background:var(--card-2); border:1px dashed var(--line-2); }
+  .coupon .ico { font-size:28px; }
+  .coupon b { display:block; font-size:14px; }
+  .coupon .sub { font-size:12px; color:var(--mist); }
+  .coupon .code { font-family:"JetBrains Mono",monospace; font-size:12px; color:var(--gold-ink); letter-spacing:.08em; }
+  .coupon.dead { opacity:.5; }
+  .ledger { display:flex; flex-direction:column; max-height:440px; overflow-y:auto; }
+  .ledger div { display:flex; justify-content:space-between; gap:10px; padding:9px 0; border-top:1px solid var(--line); font-size:13px; }
+  .ledger div span { color:var(--mist); }
+  .ledger div .t { font-size:11px; color:var(--faint); display:block; }
+  .ledger div b { font-family:"JetBrains Mono",monospace; white-space:nowrap; }
+  .empty-msg { color:var(--mist); font-size:13px; padding:18px 0; }
+
+  /* toast + modal */
+  .toast { position:fixed; left:50%; bottom:24px; transform:translate(-50%,30px); opacity:0; z-index:120; pointer-events:none;
+    background:var(--card-hi); border:1px solid var(--line-2); border-radius:999px; padding:11px 20px; font-size:13px; box-shadow:var(--shadow);
+    backdrop-filter:blur(14px); transition:all .3s; max-width:calc(100vw - 32px); }
+  .toast.on { transform:translate(-50%,0); opacity:1; }
+  .modal { position:fixed; inset:0; z-index:110; display:grid; place-items:center; padding:16px; background:color-mix(in srgb,var(--bg) 60%,transparent); backdrop-filter:blur(6px); }
+  .modal[hidden] { display:none; }
+  .modal-card { max-width:440px; width:100%; text-align:center; }
+  .modal-card .big-ico { font-size:48px; }
+  .modal-card h3 { font-family:var(--serif); font-weight:400; font-size:34px; margin:6px 0 8px; }
+  .modal-card p { color:var(--mist); font-size:14px; line-height:1.6; }
+  .modal-card .code-big { font-family:"JetBrains Mono",monospace; font-size:24px; letter-spacing:.14em; color:var(--gold-ink);
+    padding:14px; border:2px dashed var(--gold); border-radius:14px; margin:14px 0; }
+  .modal-actions { display:flex; gap:10px; justify-content:center; flex-wrap:wrap; margin-top:16px; }
+
+  /* ---------- studio stepper: 3 phases × 2 steps, each with live state ---------- */
+  .stepper { position:sticky; top:var(--hdr-h,64px); z-index:30; margin-top:22px; display:grid; grid-template-columns:repeat(3,1fr) auto; gap:8px;
+    padding:8px; border-radius:22px; border:1px solid var(--line-2); background:color-mix(in srgb,var(--bg) 82%,transparent); backdrop-filter:blur(14px); }
+  .phase { display:flex; flex-direction:column; gap:4px; min-width:0; }
+  .phase-l { font-size:9px; letter-spacing:.26em; text-transform:uppercase; color:var(--faint); padding:2px 10px 0; }
+  .phase-steps { display:grid; grid-template-columns:1fr 1fr; gap:4px; }
+  .stp { position:relative; display:flex; gap:9px; align-items:center; padding:8px 10px; border-radius:14px; text-decoration:none; color:var(--ink); min-width:0; transition:background .15s; }
+  .stp:hover { background:var(--card-2); }
+  .stp.on { background:var(--gold); color:var(--on-gold); }
+  .stp .dot { width:24px; height:24px; flex:0 0 auto; border-radius:50%; display:grid; place-items:center; font-size:11px; font-family:"JetBrains Mono",monospace;
+    border:1px solid var(--line-2); color:var(--mist); }
+  .stp.done .dot { background:var(--good); border-color:var(--good); color:#fff; }
+  .stp.on .dot { border-color:var(--on-gold); color:var(--on-gold); background:transparent; }
+  .stp.on.done .dot { background:var(--on-gold); color:var(--gold); }
+  .stp .tx { display:flex; flex-direction:column; min-width:0; }
+  .stp b { font-size:13px; font-weight:600; }
+  .stp small { font-size:11px; color:var(--mist); white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+  .stp.on small { color:var(--on-gold); opacity:.8; }
+  .stp-cta { align-self:center; font-size:12px; padding:9px 14px; border-radius:999px; border:1px dashed var(--line-2); color:var(--mist); text-decoration:none; white-space:nowrap; }
+  .stp-cta:hover { color:var(--ink); border-color:var(--violet); }
+  @media (max-width: 1100px){ .stepper { grid-template-columns:1fr 1fr 1fr; } .stp-cta { grid-column:1/-1; justify-self:end; } .stp small { display:none; } }
+  @media (max-width: 720px){ .stepper { position:static; grid-template-columns:1fr; } .phase-steps { grid-template-columns:1fr 1fr; } .stp small { display:block; } }
+  .next-hint { margin-top:28px; display:flex; gap:14px; align-items:center; flex-wrap:wrap; padding:16px 18px; border-radius:18px;
+    border:1px solid var(--line-2); background:var(--card-2); }
+  .next-hint p { margin:0; flex:1 1 260px; color:var(--mist); font-size:14px; line-height:1.55; }
+  .next-hint p b { color:var(--ink); }
+
+  /* compose step */
+  .compose-grid { display:grid; grid-template-columns:260px minmax(0,1fr); gap:16px; }
+  @media (max-width: 860px){ .compose-grid { grid-template-columns:1fr; } }
+  .compose-grid .deck { margin-top:0; }
+  .cp-sym { font-family:var(--serif); font-size:52px; line-height:1; margin:6px 0 4px; }
+  .styles { display:grid; grid-template-columns:repeat(5,1fr); gap:10px; }
+  @media (max-width: 1000px){ .styles { grid-template-columns:repeat(2,1fr); } }
+  @media (max-width: 520px){ .styles { grid-template-columns:1fr; } }
+  .sty { position:relative; text-align:left; font-family:inherit; color:var(--ink); cursor:pointer; padding:14px; border-radius:18px;
+    background:var(--card-2); border:1px solid var(--line-2); display:flex; flex-direction:column; gap:6px; transition:transform .15s, border-color .15s; }
+  .sty:hover { transform:translateY(-2px); border-color:var(--gold); }
+  .sty.on { border-color:var(--gold); box-shadow:0 0 0 2px var(--gold) inset; }
+  .sty .ico { font-size:26px; }
+  .sty b { font-size:15px; }
+  .sty span.d { font-size:12px; color:var(--mist); line-height:1.5; }
+  .sty .lk { position:absolute; top:12px; right:12px; font-size:11px; color:var(--violet); font-weight:600; }
+  .sty.locked { opacity:.75; }
+  .sty.locked:hover { border-color:var(--violet); }
+  .blueprint { display:flex; flex-direction:column; }
+  .bp-row { display:grid; grid-template-columns:150px 1fr 24px minmax(0,1.3fr); gap:14px; align-items:center; padding:11px 0; border-top:1px solid var(--line); font-size:13px; }
+  .bp-row:first-child { border-top:none; }
+  .bp-k { color:var(--mist); font-size:12px; }
+  .bp-k b { display:block; color:var(--ink); font-size:13px; }
+  .bp-bar { height:8px; border-radius:999px; background:var(--line-2); position:relative; overflow:hidden; }
+  .bp-bar i { position:absolute; top:0; bottom:0; border-radius:999px; background:linear-gradient(90deg,var(--violet),var(--gold)); }
+  .bp-bar.sym i { background:var(--good); } .bp-bar.sym i.neg { background:var(--bad); }
+  .bp-bar.sym::after { content:""; position:absolute; left:50%; top:-2px; bottom:-2px; width:1px; background:var(--mist); opacity:.5; }
+  .bp-arrow { color:var(--gold-ink); text-align:center; }
+  .bp-m b { color:var(--gold-ink); }
+  .bp-m span { display:block; font-size:12px; color:var(--mist); }
+  @media (max-width: 720px){ .bp-row { grid-template-columns:1fr; gap:6px; } .bp-arrow { display:none; } }
+  .cp-go { display:flex; gap:14px; align-items:center; flex-wrap:wrap; margin-top:20px; }
+
+  /* collection */
+  .lib { display:grid; grid-template-columns:repeat(auto-fill,minmax(260px,1fr)); gap:12px; margin-top:16px; }
+  .lib-item { position:relative; padding:16px; border-radius:20px; background:var(--card); border:1px solid var(--line); backdrop-filter:blur(10px); display:flex; flex-direction:column; gap:6px; }
+  .lib-item.sel { border-color:var(--violet); box-shadow:0 0 0 2px var(--violet) inset; }
+  .lib-item .top { display:flex; justify-content:space-between; align-items:baseline; gap:8px; }
+  .lib-item .sym { font-family:var(--serif); font-size:30px; line-height:1; }
+  .lib-item svg { width:100%; height:54px; }
+  .lib-item .meta { font-size:12px; color:var(--mist); }
+  .lib-item .acts { display:flex; gap:6px; flex-wrap:wrap; margin-top:6px; align-items:center; }
+  .lib-item .acts label { margin:0 0 0 auto; display:flex; gap:6px; align-items:center; text-transform:none; letter-spacing:0; font-size:12px; cursor:pointer; }
+  .cmp { width:100%; border-collapse:collapse; font-size:13px; }
+  .cmp th, .cmp td { padding:9px 8px; border-top:1px solid var(--line); text-align:left; }
+  .cmp th { font-size:10px; letter-spacing:.2em; text-transform:uppercase; color:var(--mist); font-weight:500; }
+  .cmp td:first-child { color:var(--mist); }
+  .cmp td.win { color:var(--gold-ink); font-weight:600; }
+  .cmp-note { color:var(--mist); font-size:14px; line-height:1.6; margin:14px 0 0; }
+  .cmp-note b { color:var(--ink); }
 </style>
 </head>
 <body>
@@ -496,7 +731,7 @@
 
 <header class="topbar">
   <div class="topbar-in">
-    <a class="brand" href="#top">
+    <a class="brand" href="#/">
       <svg class="brand-mark" viewBox="0 0 26 26" aria-hidden="true">
         <defs><linearGradient id="bm" x1="0" y1="1" x2="1" y2="0"><stop offset="0" stop-color="var(--violet)"/><stop offset="1" stop-color="var(--gold)"/></linearGradient></defs>
         <path d="M2 19 L7 13 L11 16 L16 7 L20 11 L24 4" fill="none" stroke="url(#bm)" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"/>
@@ -505,7 +740,7 @@
       <span class="logo">Market <em>Sonata</em></span>
     </a>
     <nav class="nav" id="nav" aria-label="Sections">
-      <a href="#listen">Listen</a><a href="#explore">Explore</a><a href="#score">Score</a><a href="#story">Story</a><a href="#play">Play</a><a href="#how">How it works</a>
+      <a href="#/" data-nav="home">Home</a><a href="#/studio/listen" data-nav="studio">Studio</a><a href="#/game" data-nav="game">🎮 Game mode</a><a href="#/how" data-nav="how">How it works</a>
     </nav>
     <div class="symbol-wrap">
       <svg class="ico" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" aria-hidden="true"><circle cx="11" cy="11" r="7"/><path d="M20 20l-3.5-3.5"/></svg>
@@ -515,7 +750,7 @@
       <div class="search-drop" id="searchDrop" style="display:none"></div>
     </div>
     <div class="hdr-right">
-      <a class="tag" id="pointsTag" href="#play" title="Your best score in Name that chart" style="border-color:var(--gold);color:var(--gold-ink);text-decoration:none">🎯 best 0</a>
+      <a class="tag" id="pointsTag" href="#/game/wallet" title="Your points wallet" style="border-color:var(--gold);color:var(--gold-ink);text-decoration:none">🪙 0 pts</a>
       <div class="seg" id="themeSeg" role="group" aria-label="Colour theme">
         <button type="button" data-theme-choice="auto"  title="Follow the system setting">Auto</button>
         <button type="button" data-theme-choice="light" title="Light theme">☀</button>
@@ -524,9 +759,11 @@
     </div>
   </div>
   <div class="tape" id="tape" aria-label="Market ticker tape"><div class="tape-track" id="tapeTrack"></div></div>
+  <div class="crumbs" id="crumbs" aria-label="You are here"></div>
 </header>
 
-<!-- ======================= LANDING ======================= -->
+<!-- ======================= LAYER 1 · HOME ======================= -->
+<div class="screen" data-screen="home">
 <section class="landing" id="top">
   <canvas id="heroCv" aria-hidden="true"></canvas>
   <div class="wrap landing-in">
@@ -537,9 +774,21 @@
       Rallies become melodies, panics become dissonance, trading volume becomes the drums —
       and an AI critic tells you what you just heard.
     </p>
-    <div class="cta reveal">
-      <a class="primary" href="#listen">▶&nbsp; Start listening</a>
-      <a class="btn-ghost lg" href="#explore">Browse every market →</a>
+    <div class="doors reveal">
+      <a class="door" href="#/studio">
+        <span class="door-ico">🎧</span>
+        <span class="door-k">Mode 1</span>
+        <b>Studio</b>
+        <span class="door-d">Pick any market and hear its song. Browse, read the score and get the story behind it. No points, no clock.</span>
+        <span class="door-go">Enter the studio →</span>
+      </a>
+      <a class="door game" href="#/game">
+        <span class="door-ico">🎮</span>
+        <span class="door-k">Mode 2</span>
+        <b>Game mode</b>
+        <span class="door-d">Listen to a mystery song and guess which chart wrote it. Earn points and trade them for power-ups and vouchers.</span>
+        <span class="door-go">Enter game mode →</span>
+      </a>
     </div>
     <div class="kpis reveal">
       <div class="kpi"><b data-count="20218">0</b><span>US stocks</span></div>
@@ -549,13 +798,83 @@
       <div class="kpi"><b data-count="41">0</b><span>markets worldwide</span></div>
     </div>
   </div>
-  <a class="scroll-cue" href="#listen" aria-label="Scroll to the player"><span></span></a>
 </section>
+</div>
 
 <main class="wrap">
-  <!-- ======================= 01 LISTEN ======================= -->
-  <section class="sec" id="listen">
-    <div class="sec-hd reveal"><span class="num">01</span><div><div class="eyebrow">Now playing</div><h2 class="h2">Listen</h2></div></div>
+  <!-- ======================= LAYER 2 · STUDIO ======================= -->
+  <div class="screen" data-screen="studio">
+  <!-- the studio is a path: 3 phases, 6 steps; each step shows its own state -->
+  <nav class="stepper" id="studioTabs" aria-label="Studio steps"></nav>
+
+  <!-- ======================= 02 COMPOSE ======================= -->
+  <section class="sec panel" id="compose" data-panel="compose">
+    <div class="sec-hd"><span class="num">02</span><div><div class="eyebrow">Set up the piece</div><h2 class="h2">Compose</h2></div>
+      <p class="sec-sub">Choose the time window and a musical style. The blueprint shows how this market's data turns into music before you listen.</p></div>
+    <div class="compose-grid">
+      <div class="card cp-market">
+        <div class="eyebrow">Market</div>
+        <div class="cp-sym" id="cpSym">AAPL</div>
+        <div class="mist" id="cpName" style="font-size:13px"></div>
+        <a class="btn-ghost" href="#/studio/explore" style="margin-top:12px">← Change market</a>
+      </div>
+      <div class="card deck">
+        <div class="eyebrow" style="flex-basis:100%">Time window</div>
+        <div class="grp">
+          <span class="lbl">Window</span>
+          <div class="seg" id="rangeSeg" role="group" aria-label="Time window"></div>
+        </div>
+        <div class="grp dates">
+          <input id="start" type="date" value="2024-01-01" aria-label="From" />
+          <span class="mist">→</span>
+          <input id="end" type="date" value="2024-12-31" aria-label="To" />
+        </div>
+        <div class="grp">
+          <span class="lbl">Bars</span>
+          <div class="seg" id="intervalSeg" role="group" aria-label="Bar size"></div>
+        </div>
+        <div class="grp" style="margin-left:auto">
+          <label class="live">
+            <input type="checkbox" id="liveToggle" />
+            <span id="liveDot"></span> Live · 60s
+          </label>
+        </div>
+        <p class="badge" id="liveStatus" style="margin:0;flex-basis:100%">Reads live Yahoo Finance data when the backend is reachable.</p>
+      </div>
+    </div>
+
+    <div class="card" style="margin-top:16px">
+      <div class="card-hd"><div><div class="eyebrow">Musical style</div><h3 class="h3">How should it sound?</h3></div>
+        <span class="badge">Locked styles are unlocked with points in game mode.</span></div>
+      <div class="styles" id="styleGrid"></div>
+    </div>
+
+    <div class="card" style="margin-top:16px">
+      <div class="card-hd"><div><div class="eyebrow">Blueprint</div><h3 class="h3" id="bpTitle">From data to music</h3></div>
+        <span class="tag" id="bpStale" hidden>settings changed · compose to update</span></div>
+      <div class="blueprint" id="blueprint"></div>
+    </div>
+
+    <div class="cp-go">
+      <button class="primary" id="cpCompose">♪ Compose &amp; listen</button>
+      <span class="badge">Composes the song with these settings and opens the player.</span>
+    </div>
+  </section>
+
+  <!-- ======================= 06 COLLECTION ======================= -->
+  <section class="sec panel" id="collection" data-panel="collection">
+    <div class="sec-hd"><span class="num">06</span><div><div class="eyebrow">Your library</div><h2 class="h2">Collection</h2></div>
+      <p class="sec-sub">Songs you've saved. Reopen any of them, or tick two to compare how their markets and their music differ.</p></div>
+    <div class="card" id="cmpCard" hidden>
+      <div class="card-hd"><div><div class="eyebrow">Side by side</div><h3 class="h3">Compare</h3></div><button class="btn-ghost" id="cmpClear">Clear selection</button></div>
+      <div id="cmpBody"></div>
+    </div>
+    <div class="lib" id="libGrid"></div>
+  </section>
+
+  <!-- ======================= 03 LISTEN ======================= -->
+  <section class="sec panel" id="listen" data-panel="listen">
+    <div class="sec-hd reveal"><span class="num">03</span><div><div class="eyebrow">Now playing</div><h2 class="h2">Listen</h2></div></div>
 
     <div class="stage reveal" id="stage">
       <canvas id="stageCv" aria-hidden="true"></canvas>
@@ -580,6 +899,8 @@
             <div class="secnow" id="secNow"></div>
           </div>
           <div style="margin-left:auto;display:flex;gap:8px;flex-wrap:wrap">
+            <button class="btn-ghost lg" id="saveBtn" title="Save this song to your collection">☆ Save</button>
+            <a class="btn-ghost lg" href="#/studio/compose" title="Change window or style">⚙ Settings</a>
             <button class="primary" id="composeBtn">Compose Sonata</button>
           </div>
         </div>
@@ -588,33 +909,11 @@
       <div class="stage-tip" id="stageTip" hidden></div>
     </div>
 
-    <div class="card deck reveal">
-      <div class="grp">
-        <span class="lbl">Window</span>
-        <div class="seg" id="rangeSeg" role="group" aria-label="Time window"></div>
-      </div>
-      <div class="grp dates">
-        <input id="start" type="date" value="2024-01-01" aria-label="From" />
-        <span class="mist">→</span>
-        <input id="end" type="date" value="2024-12-31" aria-label="To" />
-      </div>
-      <div class="grp">
-        <span class="lbl">Bars</span>
-        <div class="seg" id="intervalSeg" role="group" aria-label="Bar size"></div>
-      </div>
-      <div class="grp" style="margin-left:auto">
-        <label class="live">
-          <input type="checkbox" id="liveToggle" />
-          <span id="liveDot"></span> Live · 60s
-        </label>
-      </div>
-      <p class="badge" id="liveStatus" style="margin:0;flex-basis:100%">Reads live Yahoo Finance data when the backend is reachable.</p>
-    </div>
   </section>
 
-  <!-- ======================= 02 EXPLORE ======================= -->
-  <section class="sec" id="explore">
-    <div class="sec-hd reveal"><span class="num">02</span><div><div class="eyebrow">Market explorer</div><h2 class="h2">Choose what to listen to</h2></div>
+  <!-- ======================= 01 CHOOSE ======================= -->
+  <section class="sec panel" id="explore" data-panel="explore">
+    <div class="sec-hd reveal"><span class="num">01</span><div><div class="eyebrow">Market explorer</div><h2 class="h2">Choose what to listen to</h2></div>
       <p class="sec-sub">Every stock, ETF and fund Yahoo Finance lists — by country, sector and move — plus live movers and hand-picked collections.</p></div>
 
     <div class="card explorer reveal">
@@ -667,8 +966,8 @@
   </section>
 
   <!-- ======================= 03 SCORE ======================= -->
-  <section class="sec" id="score">
-    <div class="sec-hd reveal"><span class="num">03</span><div><div class="eyebrow">The music & the data</div><h2 class="h2">Read the score</h2></div></div>
+  <section class="sec panel" id="score" data-panel="score">
+    <div class="sec-hd reveal"><span class="num">04</span><div><div class="eyebrow">The music & the data</div><h2 class="h2">Read the score</h2></div></div>
     <div class="grid">
       <div class="card empty full" id="emptyState">
         <div>
@@ -730,8 +1029,8 @@
   </section>
 
   <!-- ======================= 04 STORY ======================= -->
-  <section class="sec" id="story">
-    <div class="sec-hd reveal"><span class="num">04</span><div><div class="eyebrow">Programme note</div><h2 class="h2">The story behind the song</h2></div>
+  <section class="sec panel" id="story" data-panel="story">
+    <div class="sec-hd reveal"><span class="num">05</span><div><div class="eyebrow">Programme note</div><h2 class="h2">The story behind the song</h2></div>
       <p class="sec-sub">Press <b>✦ Write with AI</b> and Claude writes it from the real price history and the finished score — pick a voice, a language, or ask for something specific.</p></div>
 
     <div class="grid">
@@ -773,24 +1072,110 @@
     </div>
   </section>
 
-  <!-- ======================= 05 PLAY ======================= -->
-  <section class="sec" id="play">
-    <div class="sec-hd reveal"><span class="num">05</span><div><div class="eyebrow">Game</div><h2 class="h2">Name that chart</h2></div>
-      <p class="sec-sub">A mystery song plays. Three real price charts appear — only one of them wrote the song. Trust your ears and click it.</p></div>
-    <div class="card game reveal" id="game">
+  </div><!-- /studio -->
+
+  <!-- ======================= LAYER 2 · GAME MODE ======================= -->
+  <div class="screen" data-screen="game">
+  <div class="sub-tabs game" id="gameTabs" role="tablist" aria-label="Game mode">
+    <a href="#/game/lobby" data-tab="lobby">🏠 Lobby</a>
+    <a href="#/game/tutorial" data-tab="tutorial">📖 How to play</a>
+    <a href="#/game/play" data-tab="play">▶ Play</a>
+    <a href="#/game/shop" data-tab="shop">🛍 Rewards shop</a>
+    <a href="#/game/wallet" data-tab="wallet">🎟 My wallet</a>
+    <a class="sub-tabs-cta" href="#/studio/listen">✕ Exit game mode</a>
+  </div>
+
+  <!-- lobby -->
+  <section class="sec panel" data-panel="lobby">
+    <div class="sec-hd"><div><div class="eyebrow">Game mode</div><h2 class="h2">Name that chart</h2></div>
+      <p class="sec-sub">Listen to a mystery song, find the chart that wrote it, earn points, then spend them in the rewards shop.</p></div>
+    <div class="lobby">
+      <div class="card lobby-wallet">
+        <div class="eyebrow">Your wallet</div>
+        <div class="lw-pts"><span id="lwPts">0</span><small>pts</small></div>
+        <div class="tier" id="lwTier"></div>
+        <div class="tier-bar"><i id="lwTierBar"></i></div>
+        <p class="badge" id="lwTierNext"></p>
+        <div class="lw-stats" id="lwStats"></div>
+      </div>
+      <div class="lobby-path">
+        <a class="path-step" href="#/game/tutorial"><span class="ps-n">1</span><div><b>Learn the rules</b><span>A short walkthrough: how the music gives away the chart. First run-through earns <b class="gold">+100 pts</b>.</span></div><span class="ps-st" id="psTut"></span></a>
+        <a class="path-step" href="#/game/play"><span class="ps-n">2</span><div><b>Play 5 rounds</b><span>Each point you score goes into your wallet. The first game of the day earns an extra <b class="gold">+50</b>.</span></div><span class="ps-st" id="psPlay"></span></a>
+        <a class="path-step" href="#/game/shop"><span class="ps-n">3</span><div><b>Redeem rewards</b><span>Swap points for power-ups you can use in a round, or for vouchers.</span></div><span class="ps-st" id="psShop"></span></a>
+        <a class="path-step" href="#/game/wallet"><span class="ps-n">4</span><div><b>Use your coupons</b><span>Power-ups appear during a round. Vouchers show a code when you use them.</span></div><span class="ps-st" id="psWallet"></span></a>
+      </div>
+    </div>
+  </section>
+
+  <!-- tutorial -->
+  <section class="sec panel" data-panel="tutorial">
+    <div class="sec-hd"><div><div class="eyebrow">How to play</div><h2 class="h2">The full game, step by step</h2></div></div>
+    <div class="card tut">
+      <div class="tut-dots" id="tutDots"></div>
+      <div class="tut-body" id="tutBody"></div>
+      <div class="tut-nav">
+        <button class="btn-ghost" id="tutPrev">← Back</button>
+        <span class="badge mono" id="tutCount"></span>
+        <button class="primary sm" id="tutNext">Next →</button>
+      </div>
+    </div>
+  </section>
+
+  <!-- play -->
+  <section class="sec panel" data-panel="play" id="play">
+    <div class="card game" id="game">
       <div class="game-hud">
         <div class="hud"><span>Round</span><b id="gRound">–</b></div>
         <div class="hud"><span>Score</span><b id="gScore">0</b></div>
         <div class="hud"><span>Streak</span><b id="gStreak">0</b></div>
         <div class="hud"><span>Best</span><b id="gBest">0</b></div>
+        <div class="hud"><span>Wallet</span><b id="gWallet">0</b></div>
       </div>
       <div id="gBody"></div>
     </div>
   </section>
 
-  <!-- ======================= 06 HOW ======================= -->
+  <!-- shop -->
+  <section class="sec panel" data-panel="shop">
+    <div class="sec-hd"><div><div class="eyebrow">Rewards shop</div><h2 class="h2">Spend your points</h2></div>
+      <p class="sec-sub">Higher tiers get a discount on everything. Your tier depends on all the points you've ever earned, so spending never lowers it.</p></div>
+    <div class="shop-bar card">
+      <div><span class="eyebrow">Balance</span> <b class="mono gold" id="shopPts">0</b> pts</div>
+      <div class="tier" id="shopTier"></div>
+      <div class="seg" id="shopCat" role="group" aria-label="Category">
+        <button type="button" data-c="all" class="on">All</button>
+        <button type="button" data-c="boost">Power-ups</button>
+        <button type="button" data-c="style">Styles</button>
+        <button type="button" data-c="voucher">Vouchers</button>
+      </div>
+    </div>
+    <div class="shop-grid" id="shopGrid"></div>
+  </section>
+
+  <!-- wallet -->
+  <section class="sec panel" data-panel="wallet">
+    <div class="sec-hd"><div><div class="eyebrow">My wallet</div><h2 class="h2">Coupons &amp; history</h2></div></div>
+    <div class="grid">
+      <div class="card">
+        <div class="card-hd"><h3 class="h3">My coupons</h3>
+          <div class="seg" id="cpFilter" role="group" aria-label="Coupon status">
+            <button type="button" data-f="active" class="on">Active</button>
+            <button type="button" data-f="used">Used / expired</button>
+          </div></div>
+        <div class="coupons" id="couponList"></div>
+      </div>
+      <div class="card">
+        <div class="card-hd"><h3 class="h3">Points history</h3></div>
+        <div class="ledger" id="ledger"></div>
+      </div>
+    </div>
+  </section>
+  </div><!-- /game -->
+
+  <!-- ======================= LAYER 2 · HOW IT WORKS ======================= -->
+  <div class="screen" data-screen="how">
   <section class="sec" id="how">
-    <div class="sec-hd reveal"><span class="num">06</span><div><div class="eyebrow">Method</div><h2 class="h2">How a chart becomes a song</h2></div></div>
+    <div class="sec-hd reveal"><span class="num">i</span><div><div class="eyebrow">Method</div><h2 class="h2">How a chart becomes a song</h2></div></div>
     <div class="steps">
       <div class="step reveal"><span class="step-n">i</span><h4>Read the market</h4><p>Daily, hourly or monthly bars from Yahoo Finance are cut into twelve chapters. Each chapter gets a shape, a momentum, a volatility and a level of participation.</p></div>
       <div class="step reveal"><span class="step-n">ii</span><h4>Find the mood</h4><p>The overall trend chooses the modal family — bright, dark or ambiguous. Volatility sets the tempo and how dissonant the chords get; volume sets how hard the band plays.</p></div>
@@ -810,7 +1195,10 @@
       </table>
     </div>
   </section>
+  </div><!-- /how -->
 </main>
+<div class="toast" id="toast" role="status" aria-live="polite"></div>
+<div class="modal" id="modal" hidden><div class="modal-card card" id="modalCard"></div></div>
 
 <footer class="site-foot">
   <div class="wrap foot-in">
@@ -819,8 +1207,8 @@
       <p class="mist">Every market becomes a song. Art, not investment advice.</p>
     </div>
     <div class="foot-cols">
-      <div><h5>Listen</h5><a href="#listen">Player</a><a href="#score">Score & charts</a><a href="#play">Name that chart</a><a href="#story">Programme note</a></div>
-      <div><h5>Explore</h5><a href="#explore">All markets</a><a href="#explore">Live movers</a><a href="#explore">Collections</a></div>
+      <div><h5>Studio</h5><a href="#/studio/listen">Player</a><a href="#/studio/explore">All markets</a><a href="#/studio/score">Score & charts</a><a href="#/studio/story">Programme note</a></div>
+      <div><h5>Game mode</h5><a href="#/game/lobby">Lobby</a><a href="#/game/tutorial">How to play</a><a href="#/game/shop">Rewards shop</a><a href="#/game/wallet">My wallet</a></div>
       <div><h5>Data</h5><span class="mist">Yahoo Finance</span><span class="mist">Notes by Claude</span></div>
     </div>
   </div>
@@ -999,15 +1387,93 @@ const FORM=[
   {name:"Outro",  kind:"outro",  bars:4, at:1.0},
 ];
 
-function composer(f, octave){
+/* ---------- STYLES ----------
+   A style swaps the *arrangement tables* — form, progressions, bass figure,
+   drum pattern, swing, tempo range, chord colour, default instruments — but
+   never the mapping itself: trend still picks the mode family, volatility still
+   drives tempo / density / tension, volume still drives dynamics, and the
+   market's most energetic stretch is still the hook. `null` means "use the
+   ticker's own fingerprint", which is what Pop does everywhere.             */
+const STYLES={
+  pop:{name:"Pop",ico:"🎤",free:true,
+    blurb:"Verse–chorus song with a hook, a full band and a drum kit. The original Market Sonata sound.",
+    form:null,progs:null,bass:null,drums:null,swing:null,ext:null,arpAll:false,
+    tempo:null, inst:{melody:"default",pad:"default",bass:"default",arp:"default"}},
+  classical:{name:"Classical",ico:"🎻",free:true,
+    blurb:"Prelude, theme, development and coda for piano and strings. Alberti bass, no drums, cadences that resolve.",
+    form:[
+      {name:"Prelude",    kind:"intro",  bars:4, at:0.0},
+      {name:"Theme",      kind:"verse",  bars:8, at:0.12},
+      {name:"Climax",     kind:"chorus", bars:8, at:0.38},
+      {name:"Variation",  kind:"verse",  bars:8, at:0.55},
+      {name:"Development",kind:"bridge", bars:4, at:0.75},
+      {name:"Reprise",    kind:"chorus", bars:8, at:0.9},
+      {name:"Coda",       kind:"outro",  bars:4, at:1.0}],
+    progs:{bright:{intro:[0],verse:[0,3,4,0],chorus:[0,5,1,4],bridge:[1,4],outro:[0]},   // I–IV–V–I, I–vi–ii–V
+           dark:  {intro:[0],verse:[0,3,4,0],chorus:[0,5,3,4],bridge:[1,4],outro:[0]},   // i–iv–v–i
+           modal: {intro:[0],verse:[0,3,0,4],chorus:[0,5,3,4],bridge:[3,4],outro:[0]}},
+    bass:"alberti",drums:"none",swing:0,ext:"triad",arpAll:false,
+    tempo:(f,fp)=>Math.max(52,66+36*f.avgVol+fp.tempoNudge*0.5),
+    inst:{melody:"piano",pad:"strings",bass:"deep",arp:"piano"}},
+  lofi:{name:"Lo-fi",ico:"🌙",price:800,
+    blurb:"Lazy, swung beat with soft 7th chords and a warm piano. Built for studying.",
+    form:[
+      {name:"Intro",   kind:"intro",  bars:4, at:0.0},
+      {name:"Loop A",  kind:"verse",  bars:8, at:0.12},
+      {name:"Hook",    kind:"chorus", bars:8, at:0.38},
+      {name:"Loop B",  kind:"verse",  bars:8, at:0.55},
+      {name:"Break",   kind:"bridge", bars:4, at:0.75},
+      {name:"Hook",    kind:"chorus", bars:8, at:0.9},
+      {name:"Fade out",kind:"outro",  bars:4, at:1.0}],
+    progs:{bright:{intro:[0],verse:[3,2,1,0],chorus:[3,4,2,5],bridge:[1,4],outro:[0]},   // IVmaj7–iii7–ii7–Imaj7
+           dark:  {intro:[0],verse:[0,3,6,2],chorus:[5,3,0,4],bridge:[3,4],outro:[0]},
+           modal: {intro:[0],verse:[0,3,0,3],chorus:[1,4,0,3],bridge:[5,3],outro:[0]}},
+    bass:"lofi",drums:"lofi",swing:0.15,ext:"seventh",arpAll:false,
+    tempo:(f,fp)=>Math.max(64,72+18*f.avgVol+fp.tempoNudge*0.4),
+    inst:{melody:"piano",pad:"default",bass:"deep",arp:"pluck"}},
+  jazz:{name:"Jazz",ico:"🎷",price:1200,
+    blurb:"Swing feel, walking bass, ride cymbal and ii–V–I changes with 9th chords.",
+    form:[
+      {name:"Intro",     kind:"intro",  bars:4, at:0.0},
+      {name:"Head A",    kind:"verse",  bars:8, at:0.12},
+      {name:"Head B",    kind:"chorus", bars:8, at:0.38},
+      {name:"Solo",      kind:"verse",  bars:8, at:0.55},
+      {name:"Trading 4s",kind:"bridge", bars:4, at:0.75},
+      {name:"Head out",  kind:"chorus", bars:8, at:0.9},
+      {name:"Tag",       kind:"outro",  bars:4, at:1.0}],
+    progs:{bright:{intro:[1,4],verse:[1,4,0,0],chorus:[1,4,0,5],bridge:[2,5,1,4],outro:[0]},   // ii–V–I
+           dark:  {intro:[1,4],verse:[1,4,0,0],chorus:[3,6,2,5],bridge:[1,4],outro:[0]},
+           modal: {intro:[0],  verse:[0,0,1,1],chorus:[0,3,1,4],bridge:[1,4],outro:[0]}},
+    bass:"walk4",drums:"swing",swing:0.17,ext:"ninth",arpAll:false,
+    tempo:(f,fp)=>Math.max(80,96+56*f.avgVol+fp.tempoNudge),
+    inst:{melody:"organ",pad:"piano",bass:"deep",arp:"piano"}},
+  electronic:{name:"Electronic",ico:"🎛",price:1200,
+    blurb:"Build, drop and breakdown. Four-on-the-floor kick, supersaw pads and a growling bass.",
+    form:[
+      {name:"Intro",    kind:"intro",  bars:4, at:0.0},
+      {name:"Build",    kind:"verse",  bars:8, at:0.12},
+      {name:"Drop",     kind:"chorus", bars:8, at:0.38},
+      {name:"Build 2",  kind:"verse",  bars:8, at:0.55},
+      {name:"Breakdown",kind:"bridge", bars:4, at:0.75},
+      {name:"Drop",     kind:"chorus", bars:8, at:0.9},
+      {name:"Outro",    kind:"outro",  bars:4, at:1.0}],
+    progs:null,bass:"pumping",drums:"four-on-the-floor",swing:0,ext:"seventh",arpAll:true,
+    tempo:(f,fp)=>Math.max(112,118+18*f.avgVol+fp.tempoNudge*0.5),
+    inst:{melody:"pluck",pad:"strings",bass:"growl",arp:"default"}},
+};
+
+function composer(f, octave, styleId){
+  const S=STYLES[styleId]||STYLES.pop;
   const fp=fingerprint(f.symbol);
   const family = f.trend>0.15?"bright":(f.trend<-0.15?"dark":"modal");
   const mode = MODE_FAMILY[family][fp.modeIdx];
-  const scale=SCALES[mode], progs=PROGS[family][fp.progSet];
+  const scale=SCALES[mode], progs=S.progs?S.progs[family]:PROGS[family][fp.progSet];
   const oct = octave===undefined ? fp.octave : octave;
   const keyRoot=12*(oct+1)+fp.root;
-  const tempo=Math.max(56,84+44*f.avgVol+fp.tempoNudge);
+  const tempo=S.tempo?S.tempo(f,fp):Math.max(56,84+44*f.avgVol+fp.tempoNudge);
   const keyName=NOTE_NAMES[keyRoot%12];
+  const FORM_S=S.form||FORM;
+  const bassStyle=S.bass||fp.bass, drumStyle=S.drums||fp.drums, swing=S.swing!=null?S.swing:fp.swing;
 
   const deg2pitch=(deg,oct=0)=>{const nn=scale.length;const o=Math.floor(deg/nn)+oct;const st=scale[((deg%nn)+nn)%nn];return keyRoot+12*o+st;};
   const vel=(p,a=1)=>Math.max(20,Math.min(120,Math.round((40+72*p.volume)*a)));
@@ -1018,8 +1484,8 @@ function composer(f, octave){
   // What the ticker (not the market) decided — surfaced so the analyst can
   // narrate it and the UI can show it.
   const signature={key:keyName,mode,family,octave:oct,progression:fp.progSet+1,
-                   hook:fp.hookName,groove:fp.grooveIdx+1,bass:fp.bass,
-                   drums:fp.drums,swing:fp.swing,span:fp.span};
+                   hook:fp.hookName,groove:fp.grooveIdx+1,bass:bassStyle,
+                   drums:drumStyle,swing,span:fp.span,style:styleId&&STYLES[styleId]?styleId:"pop"};
 
   function buildMotif(p){let d=snap(p.contour,fp.span);if(d.length>=4){const idx=[0,1,2,3].map(i=>Math.round(i/3*(d.length-1)));d=idx.map(i=>d[i]);}else{while(d.length<4)d.push(0);}return d;}
   function develop(m,p){let x=m.slice();if(p.momentum<-0.2){const pv=x[0];x=x.map(d=>pv-(d-pv));}const sh=Math.round(p.momentum*2);x=x.map(d=>d+sh);if(p.volatility>0.5)x=x.map(d=>Math.round(d*1.5));return x;}
@@ -1052,12 +1518,16 @@ function composer(f, octave){
     }
     return out;
   }
-  const triad=(root,p)=>{const ds=[root,root+2,root+4];if(p.volatility>0.45)ds.push(root+6);return ds;};
+  // Chord colour: volatility still adds tension; a style can set a richer floor.
+  const triad=(root,p)=>{const ds=[root,root+2,root+4];
+    if(S.ext==="seventh"||S.ext==="ninth"||p.volatility>0.45)ds.push(root+6);
+    if(S.ext==="ninth"||(S.ext==="seventh"&&p.volatility>0.6))ds.push(root+8);
+    return ds;};
 
   function compose(){
     const notes=[], sections=[];
     const ph=f.phrases;
-    if(!ph.length) return {notes,tempo,keyName,mode,sections,totalBeats:0,signature};
+    if(!ph.length) return {notes,tempo,keyName,mode,sections,totalBeats:0,signature,style:signature.style};
     const pAt=fr=>ph[Math.max(0,Math.min(ph.length-1,Math.round(fr*(ph.length-1))))];
 
     // The chorus hook is distilled from the MOST ENERGETIC stretch of the
@@ -1071,7 +1541,7 @@ function composer(f, octave){
     const drum=(voice,beat,v)=>notes.push({pitch:voice==="kick"?36:voice==="snare"?38:42,start:beat,duration:0.25,velocity:clampV(v*dv),voice});
 
     let t=0, chorusCount=0;
-    for(const sec of FORM){
+    for(const sec of FORM_S){
       const p = sec.kind==="outro" ? ph[0] : pAt(sec.at); // outro returns home
       const prog=progs[sec.kind];
       const secStart=t;
@@ -1097,20 +1567,29 @@ function composer(f, octave){
           notes.push({pitch:bp,start:bar,duration:4,velocity:vel(p,0.5),voice:"bass"});
         } else if(sec.kind==="bridge"){
           [0,2].forEach(o=>notes.push({pitch:bp,start:bar+o,duration:2,velocity:vel(p,0.55),voice:"bass"}));
+        } else if(bassStyle==="alberti"){   // classical: broken chord in eighths, low–high–mid–high
+          const pat=[root,root+4,root+2,root+4], a=sec.kind==="chorus"?0.5:0.4;
+          for(let i=0;i<8;i++)notes.push({pitch:deg2pitch(pat[i%4],-1),start:bar+i*0.5,duration:0.48,velocity:vel(p,i%4===0?a+0.1:a),voice:"bass"});
+        } else if(bassStyle==="walk4"){     // jazz: a walking quarter-note line with a chromatic approach
+          const nextRoot=prog[(b+1)%prog.length];
+          [root,root+2,root+4].forEach((d,i)=>bn(d,i,0.95,i===0?0.65:0.5));
+          notes.push({pitch:deg2pitch(nextRoot,-2)-1,start:bar+3,duration:0.95,velocity:vel(p,0.5),voice:"bass"});
+        } else if(bassStyle==="lofi"){      // lo-fi: lazy, behind the beat
+          bn(root,0,1.6,0.55); bn(root+4,2.5,0.9,0.45); bn(root,3.5,0.45,0.4);
         } else if(sec.kind==="verse"){
-          if(fp.bass==="pumping"){
+          if(bassStyle==="pumping"){
             bn(root,0,0.9,0.6); bn(root,1.5,0.45,0.45); bn(root+4,2.5,0.45,0.5); bn(root,3,0.9,0.55);
-          } else if(fp.bass==="pushed"){
+          } else if(bassStyle==="pushed"){
             bn(root,0.5,1.4,0.6); bn(root+2,2.5,0.9,0.5); bn(root+4,3.5,0.45,0.45);
           } else { // walking
             bn(root,0,1.4,0.6); bn(root,2,0.9,0.5); bn(root+4,3,0.9,0.45);
           }
         } else { // chorus
-          if(fp.bass==="pushed"){
+          if(bassStyle==="pushed"){
             [[0,0.7,0.65],[0.75,0.7,0.5],[1.5,0.45,0.55],[2,0.9,0.65],[3,0.45,0.5],[3.5,0.45,0.6]]
               .forEach(([st,du,a],i)=>bn(i===4?root+4:root,st,du,a));
             notes.push({pitch:deg2pitch(root,-1),start:bar+2.5,duration:0.45,velocity:vel(p,0.5),voice:"bass"});
-          } else if(fp.bass==="walking"){
+          } else if(bassStyle==="walking"){
             [0,1,2,3].forEach(i=>bn([root,root+4,root+2,root+4][i],i,0.9,i%2?0.5:0.65));
             notes.push({pitch:deg2pitch(root,-1),start:bar+3.5,duration:0.45,velocity:vel(p,0.55),voice:"bass"});
           } else { // pumping eighths with an octave pop
@@ -1119,19 +1598,40 @@ function composer(f, octave){
         }
 
         // arpeggio (chorus sparkle) — pattern picked by the fingerprint
-        if(sec.kind==="chorus"){
-          const ad=fp.arp.map(o=>root+o);
-          for(let i=0;i<8;i++)notes.push({pitch:deg2pitch(ad[i%4],1),start:bar+i*0.5,duration:0.4,velocity:vel(p,0.32),voice:"arp"});
+        // (electronic runs it through the builds too, as a sixteenth-note riser)
+        if(sec.kind==="chorus"||(S.arpAll&&sec.kind==="verse")){
+          const ad=fp.arp.map(o=>root+o), steps=S.arpAll&&sec.kind==="chorus"?16:8, st=4/steps;
+          const a=sec.kind==="verse"?0.18+0.16*(b/sec.bars):0.32;   // builds rise in level
+          for(let i=0;i<steps;i++)notes.push({pitch:deg2pitch(ad[i%4],1),start:bar+i*st,duration:st*0.8,velocity:vel(p,a),voice:"arp"});
         }
 
         // drums
-        if(sec.kind==="verse"||sec.kind==="chorus"){
+        if(drumStyle==="none"){
+          // classical: no kit — the Alberti bass carries the pulse
+        } else if(drumStyle==="swing"&&(sec.kind==="verse"||sec.kind==="chorus"||sec.kind==="bridge")){
+          // jazz: ride "spang-a-lang" on the hat voice, feathered kick, light snare comping
           const strong=sec.kind==="chorus";
-          if(fp.drums==="four-on-the-floor"){
+          [0,1,1.5,2,3,3.5].forEach(o=>drum("hat",bar+o,(o%1?40:58)+(strong?10:0)));
+          [0,1,2,3].forEach(i=>drum("kick",bar+i,strong?52:42));
+          if(energy(p)>0.4||strong) drum("snare",bar+(b%2?2.5:1.5),strong?62:48);
+          if(b===sec.bars-1) drum("snare",bar+3.5,70);
+        } else if(drumStyle==="lofi"&&(sec.kind==="verse"||sec.kind==="chorus")){
+          // lo-fi: dusty, half-asleep boom-bap
+          const strong=sec.kind==="chorus";
+          drum("kick",bar,strong?95:85); drum("kick",bar+2.5,strong?85:75); if(strong) drum("kick",bar+1.75,60);
+          drum("snare",bar+1,strong?72:60); drum("snare",bar+3,strong?76:64);
+          for(let i=0;i<8;i++)drum("hat",bar+i*0.5,(i%2?26:40)+(strong?6:0));
+        } else if((drumStyle==="swing"||drumStyle==="lofi")&&sec.kind==="intro"&&b===sec.bars-1){
+          for(let i=0;i<4;i++)drum("hat",bar+i,34);
+        } else if(drumStyle==="swing"||drumStyle==="lofi"){
+          // bridge for lo-fi / outro: drums drop out
+        } else if(sec.kind==="verse"||sec.kind==="chorus"){
+          const strong=sec.kind==="chorus";
+          if(drumStyle==="four-on-the-floor"){
             [0,1,2,3].forEach(i=>drum("kick",bar+i,strong?110:95));
             drum("snare",bar+1,strong?100:70); drum("snare",bar+3,strong?105:80);
             for(let i=0;i<8;i++)drum("hat",bar+i*0.5,(i%2?58:34)+(strong?12:0)); // off-beat lift
-          } else if(fp.drums==="broken"){
+          } else if(drumStyle==="broken"){
             drum("kick",bar,strong?115:100); drum("kick",bar+1.5,strong?105:90); drum("kick",bar+2.5,strong?100:85);
             drum("snare",bar+1,strong?100:70); drum("snare",bar+3,strong?105:80);
             if(strong)drum("snare",bar+2.75,60);
@@ -1203,13 +1703,13 @@ function composer(f, octave){
 
     // Swing — the ticker's lilt. Nudge every off-beat eighth later so the
     // groove leans instead of marching. Applied last, to every voice at once.
-    if(fp.swing>0)notes.forEach(n=>{
+    if(swing>0)notes.forEach(n=>{
       if(Math.abs((n.start%1)-0.5)<1e-9){
-        n.start+=fp.swing; n.duration=Math.max(0.05,n.duration-fp.swing);
+        n.start+=swing; n.duration=Math.max(0.05,n.duration-swing);
       }
     });
 
-    return {notes,tempo,keyName,mode,sections,totalBeats:t+6,signature};
+    return {notes,tempo,keyName,mode,sections,totalBeats:t+6,signature,style:signature.style};
   }
   return {compose,keyName,mode,tempo,signature};
 }
@@ -1240,7 +1740,15 @@ function analyze(f, score){
     paras.push(arc);
   }
   const pitched=[...new Set(score.notes.filter(n=>!["kick","snare","hat"].includes(n.voice)).map(n=>n.voice))];
-  paras.push(`The arrangement sets a piano lead over a warm pad, a bass line and a plucked arpeggio, driven by a kick–snare–hat kit whose intensity follows the market's volatility — silent in the intro, light in the verses, full in the chorus. The finished score holds ${score.notes.length} notes across ${pitched.length} pitched voices plus drums.`);
+  const st=score.style||"pop", hasKit=score.notes.some(n=>["kick","snare","hat"].includes(n.voice));
+  const ARR={
+    pop:"The arrangement sets a lead over a warm pad, a bass line and a plucked arpeggio, driven by a kick–snare–hat kit whose intensity follows the market's volatility — silent in the intro, light in the verses, full in the chorus.",
+    classical:"Written in the classical style, it is scored for piano and strings with no drums at all: an Alberti bass carries the pulse, and the form moves from prelude through theme and development to a closing coda.",
+    lofi:"Arranged as lo-fi, it leans back on a swung, dusty boom-bap beat under soft seventh chords — the market's moods arrive muffled, as if heard through a wall.",
+    jazz:"Arranged as jazz, it swings: a walking bass climbs through ii–V–I changes, a ride cymbal keeps time and ninth chords colour every bar.",
+    electronic:"Arranged as electronic music, its verses become builds — a sixteenth-note arpeggio rising in level — and its choruses become drops over a four-on-the-floor kick.",
+  };
+  paras.push(`${ARR[st]||ARR.pop} The finished score holds ${score.notes.length} notes across ${pitched.length} pitched voices${hasKit?" plus drums":""}.`);
   if(sig.hook){
     paras.push(`Two assets can trace almost the same chart and still need to sound like different pieces, so the ticker itself is treated as an instrument-maker. The letters <em>${f.symbol}</em> are hashed into a fixed signature that the market never touches: a home of ${score.keyName} in octave ${sig.octave}, progression set ${sig.progression} of three, a ${sig.hook} rhythmic cell for the chorus hook, groove cell ${sig.groove} of eight under the verses, a ${sig.bass} bass, a ${sig.drums} kit, a melodic reach of ${sig.span} scale degrees${sig.swing?`, and a swung eighth-note lilt of ${Math.round(sig.swing*100)}%`:", and a strictly straight eighth-note feel"}. Change the symbol and the song changes character even if the price history does not.`);
   }
@@ -1401,7 +1909,7 @@ function renderSearchResults(list){
       <span class="sym">${esc(r.symbol)}</span><span class="nm">${esc(r.name)}${r.exchange?" · "+esc(r.exchange):""}${r.type?" · "+esc(r.type.toLowerCase()):""}</span>
     </div>`).join("");
   [...drop.querySelectorAll(".opt")].forEach(el=>{
-    el.onclick=()=>{ $("symbol").value=el.dataset.symbol; syncChips(); hideSearch(); $("symbol").blur(); doCompose(); };
+    el.onclick=()=>{ $("symbol").value=el.dataset.symbol; syncChips(); hideSearch(); $("symbol").blur(); navTo("#/studio/listen"); doCompose(); };
   });
   drop.style.display="block";
 }
@@ -1424,7 +1932,7 @@ $("symbol").addEventListener("input",()=>{
 $("symbol").addEventListener("keydown",e=>{
   const drop=$("searchDrop");
   if(e.key==="Enter"&&(drop.style.display==="none"||searchActiveIdx<0)){
-    e.preventDefault(); hideSearch(); $("symbol").blur(); doCompose(); return;
+    e.preventDefault(); hideSearch(); $("symbol").blur(); navTo("#/studio/listen"); doCompose(); return;
   }
   if(drop.style.display==="none")return;
   const opts=[...drop.querySelectorAll(".opt")];
@@ -1700,7 +2208,7 @@ function render(){
   const stats=[["Mode",`${score.keyName} ${score.mode}`],
     ["Total return",(feat.totalReturn*100).toFixed(1)+"%"],["Avg. volatility",Math.round(feat.avgVol*100)+"%"],
     ["Avg. volume",Math.round(feat.avgVolume*100)+"%"],["Max drawdown","−"+(feat.maxDrawdown*100).toFixed(1)+"%"],
-    ["Form","Intro–Verse–Chorus"],
+    ["Style",`${(STYLES[score.style]||STYLES.pop).ico} ${(STYLES[score.style]||STYLES.pop).name}`],
     ["Hook cell",sig.hook||"—"],["Groove",`${sig.bass||"—"} · ${sig.drums||"—"}`],
     ["Swing",sig.swing?Math.round(sig.swing*100)+"%":"straight"]];
   $("statsBox").innerHTML=stats.map(([k,v])=>`<div class="stat"><div class="k">${k}</div><div class="v">${v}</div></div>`).join("");
@@ -1713,10 +2221,14 @@ function render(){
 
 }
 
+// The arrangement style the studio composes in. Remembered per browser; a
+// locked style (not yet bought in the rewards shop) falls back to Pop.
+const STYLE_KEY="ms-style";
+let studioStyle=(()=>{ const s=loadJSON(STYLE_KEY,"pop"); return STYLES[s]?s:"pop"; })();
 // Build features + score + view from a series and store it as `current`.
 function composeFrom(series){
   const feat=extractFeatures(series,12);
-  const score=composer(feat).compose();
+  const score=composer(feat,undefined,studioStyle).compose();
   current={series,feat,score};
 }
 
@@ -2346,9 +2858,9 @@ function paintTiles(){
   $("tiles").querySelectorAll(".tile").forEach(t=>{
     t.onclick=e=>{
       if(e.target.closest(".t-play")){ const row=ex.rows.find(r=>r.symbol===t.dataset.symbol); previewMelody(t.dataset.symbol,row&&row.closes,t); return; }
-      pickSymbol(t.dataset.symbol);
+      pickSymbol(t.dataset.symbol,"#/studio/compose");
     };
-    t.onkeydown=e=>{ if((e.key==="Enter"||e.key===" ")&&e.target===t){ e.preventDefault(); pickSymbol(t.dataset.symbol); } };
+    t.onkeydown=e=>{ if((e.key==="Enter"||e.key===" ")&&e.target===t){ e.preventDefault(); pickSymbol(t.dataset.symbol,"#/studio/compose"); } };
   });
   if(ex.sub&&ex.sub.kind==="universe"){
     const what={EQUITY:"stocks",ETF:"ETFs",MUTUALFUND:"mutual funds"}[uni.type];
@@ -2495,9 +3007,9 @@ async function loadExplorer(){
   let saved=null; try{ saved=localStorage.getItem("ms-ex-tab"); }catch(e){}
   showTab(ex.tabs.find(t=>t.id===saved)||ex.tabs[0]);
 }
-function pickSymbol(sym){
+function pickSymbol(sym,dest){
   $("symbol").value=sym; syncChips();
-  $("stage").scrollIntoView({behavior:REDUCED_MOTION?"auto":"smooth",block:"start"});
+  navTo(dest||"#/studio/listen");
   doCompose();
 }
 loadUniMeta(); loadExplorer();
@@ -2579,7 +3091,7 @@ function buildDossier(){
       up_bar_share_pct:n>1?pct(c.slice(1).filter((x,i)=>x>c[i]).length/(n-1)):null,
       overall:{trend:Math.round(feat.trend*100)/100,volatility_0_to_1:Math.round(feat.avgVol*100)/100,volume_0_to_1:Math.round(feat.avgVolume*100)/100},
       chapters},
-    composition:{key:`${score.keyName} ${score.mode}`,mode_family:sig.family,tempo_bpm:Math.round(score.tempo),
+    composition:{style:(STYLES[score.style]||STYLES.pop).name,key:`${score.keyName} ${score.mode}`,mode_family:sig.family,tempo_bpm:Math.round(score.tempo),
       length:fmtTime(songSeconds()),total_bars:Math.round(score.totalBeats/4),notes:score.notes.length,
       instruments:{lead:INST_NAME("melody"),pad:INST_NAME("pad"),bass:INST_NAME("bass"),arpeggio:INST_NAME("arp"),drums:"kick, snare, hi-hat"},
       muted_voices:[...muted],
@@ -2685,11 +3197,72 @@ paintAiPrefs();
 /* ===================== website chrome: reveals, nav, landing ===================== */
 const revealObs=new IntersectionObserver(es=>es.forEach(e=>{ if(e.isIntersecting){ e.target.classList.add("in"); revealObs.unobserve(e.target); } }),{threshold:0.12});
 document.querySelectorAll(".reveal").forEach(el=>revealObs.observe(el));
-// highlight the nav link of the section in view
-const navObs=new IntersectionObserver(es=>es.forEach(e=>{
-  if(e.isIntersecting) document.querySelectorAll("#nav a").forEach(a=>a.classList.toggle("on",a.getAttribute("href")==="#"+e.target.id));
-}),{rootMargin:"-45% 0px -50% 0px"});
-document.querySelectorAll("main .sec").forEach(s=>navObs.observe(s));
+/* ===================== layers: a tiny hash router ===================== */
+// Layer 1 is Home. Layer 2 is a mode: Studio, Game mode or How it works.
+// Layer 3 is a panel inside that mode (#/studio/score, #/game/shop, …).
+// Only one screen and one panel are visible at a time.
+const ROUTES={
+  home:  {label:"Home"},
+  studio:{label:"Studio", panels:{explore:"Choose",compose:"Compose",listen:"Listen",score:"Score",story:"Story",collection:"Collection"}, def:"explore"},
+  game:  {label:"Game mode", panels:{lobby:"Lobby",tutorial:"How to play",play:"Play",shop:"Rewards shop",wallet:"My wallet"}, def:"lobby"},
+  how:   {label:"How it works"},
+};
+const LEGACY_HASH={listen:"#/studio/listen",explore:"#/studio/explore",score:"#/studio/score",story:"#/studio/story",play:"#/game/play",how:"#/how",top:"#/"};
+let route={screen:"home",panel:null};
+function parseHash(){
+  const h=(location.hash||"").replace(/^#\/?/,"");
+  if(LEGACY_HASH[h]) return parseHashStr(LEGACY_HASH[h]);
+  return parseHashStr("#/"+h);
+}
+function parseHashStr(s){
+  const [scr,pan]=s.replace(/^#\/?/,"").split("/");
+  const screen=ROUTES[scr]?scr:"home", r=ROUTES[screen];
+  const panel=r.panels?(r.panels[pan]?pan:r.def):null;
+  return {screen,panel};
+}
+function navTo(hash){ if(location.hash===hash) applyRoute(); else location.hash=hash; }
+function applyRoute(){
+  const prev=route; route=parseHash();
+  // First visit to game mode goes through the tutorial before anything else.
+  if(route.screen==="game"&&route.panel==="lobby"&&prev.screen!=="game"&&!wallet().tutorial&&!/lobby/.test(location.hash)){
+    route.panel="tutorial";
+    try{ history.replaceState(null,"","#/game/tutorial"); }catch(e){}
+  }
+  document.querySelectorAll(".screen").forEach(s=>s.classList.toggle("on",s.dataset.screen===route.screen));
+  const scr=document.querySelector(`.screen[data-screen="${route.screen}"]`);
+  if(scr&&route.panel){
+    scr.querySelectorAll(".panel").forEach(p=>p.classList.toggle("on",p.dataset.panel===route.panel));
+    scr.querySelectorAll(".sub-tabs a[data-tab]").forEach(a=>a.classList.toggle("on",a.dataset.tab===route.panel));
+  }
+  document.querySelectorAll("#nav a").forEach(a=>a.classList.toggle("on",a.dataset.nav===route.screen));
+  document.body.classList.toggle("game-mode",route.screen==="game");
+  document.body.classList.toggle("at-home",route.screen==="home");
+  // breadcrumb: Home › Studio › Score
+  const r=ROUTES[route.screen], parts=[];
+  if(route.screen!=="home"){
+    parts.push(`<a href="#/">Home</a>`);
+    if(route.panel){ parts.push(`<a href="#/${route.screen}">${r.label}</a>`, `<b>${r.panels[route.panel]}</b>`); }
+    else parts.push(`<b>${r.label}</b>`);
+  }
+  $("crumbs").innerHTML=parts.join(`<span class="sep">›</span>`);
+  // leaving a game mid-song: stop it; one thing plays at a time
+  if(prev.screen==="game"&&route.screen!=="game"&&typeof gameStopAudio==="function") gameStopAudio();
+  // canvases and Plotly charts measure 0×0 while hidden — redraw once visible
+  if(route.panel==="score"&&current){
+    requestAnimationFrame(()=>{ drawRoll(); if(typeof Plotly!=="undefined") ["priceCh","volCh","volumeCh"].forEach(id=>{ try{ Plotly.Plots.resize(id); }catch(e){} }); });
+  }
+  if(route.screen==="game") renderGamePanel(route.panel);
+  if(route.screen==="studio") renderStudioPanel(route.panel);
+  document.querySelectorAll(".screen.on .reveal").forEach(el=>el.classList.add("in"));
+  if(prev.screen!==route.screen||prev.panel!==route.panel) window.scrollTo({top:0,behavior:"auto"});
+  const hdr=document.querySelector(".topbar"); if(hdr) document.documentElement.style.setProperty("--hdr-h",hdr.offsetHeight+"px");
+}
+// A "what's next" box at the foot of every studio panel (filled by renderNextHint).
+Object.keys(ROUTES.studio.panels).forEach(p=>{
+  const el=document.querySelector(`.screen[data-screen="studio"] .panel[data-panel="${p}"]`); if(!el) return;
+  const d=document.createElement("div"); d.className="next-hint"; d.id="nh-"+p; el.appendChild(d);
+});
+window.addEventListener("hashchange",applyRoute);
 // count-up KPIs on the landing
 const countObs=new IntersectionObserver(es=>es.forEach(e=>{
   if(!e.isIntersecting) return; countObs.unobserve(e.target);
@@ -2818,15 +3391,220 @@ async function previewMelody(sym,closes,el){
 const GAME_POOL=["AAPL","MSFT","NVDA","TSLA","AMZN","META","GOOGL","NFLX","JPM","XOM","KO","DIS","BA","INTC","AMD",
   "SPY","QQQ","^GSPC","^N225","^HSI","BTC-USD","ETH-USD","GC=F","CL=F","EURUSD=X","0700.HK","600519.SS","7203.T","NKE","PFE"];
 const GAME_ROUNDS=5, BEST_KEY="ms-game-best";
-const game={round:0,score:0,streak:0,results:[],cur:null,next:null,playing:false,t0:0,answered:false,raf:0,endAt:0};
+const game={round:0,score:0,streak:0,results:[],cur:null,next:null,playing:false,t0:0,answered:false,raf:0,endAt:0,used:{},frozen:false};
 const rnd=a=>a[Math.floor(Math.random()*a.length)];
 function bestScore(){ return Number(loadJSON(BEST_KEY,0))||0; }
+
+/* ===================== points economy: wallet, tiers, shop, coupons ===================== */
+// Everything lives in this browser (localStorage). The rules:
+//  · Points earned = your game score. First finished game of the day: +50.
+//    Finishing the tutorial once: +100.
+//  · Spending takes points from the balance. Your tier is based on lifetime
+//    earnings, so spending never drops you a tier. Higher tiers get a shop discount.
+//  · Power-ups are used during a round (one of each type per round) and never
+//    expire. Vouchers expire 30 days after you redeem them and show a code when used.
+const WALLET_KEY="ms-wallet";
+const TIERS=[
+  {name:"Listener",  min:0,     off:0,    ico:"🎧"},
+  {name:"Musician",  min:1500,  off:0.05, ico:"🎹"},
+  {name:"Conductor", min:5000,  off:0.10, ico:"🎼"},
+  {name:"Maestro",   min:12000, off:0.15, ico:"👑"},
+];
+const SHOP=[
+  {id:"fifty",   cat:"boost",   ico:"✂️", name:"50 / 50",        price:300,  desc:"Removes one wrong chart, so you choose between two."},
+  {id:"clue",    cat:"boost",   ico:"🔎", name:"Clue card",      price:200,  desc:"Shows what the song's key and tempo say about the chart before you answer."},
+  {id:"double",  cat:"boost",   ico:"⚡", name:"Double points", price:500,  desc:"Doubles this round's points if you get it right."},
+  {id:"shield",  cat:"boost",   ico:"🛡", name:"Streak shield",  price:400,  desc:"A wrong answer this round won't reset your streak."},
+  {id:"replay",  cat:"boost",   ico:"⏱", name:"Time freeze",    price:250,  desc:"Puts the speed bonus back to +50 and keeps it there for the rest of the round."},
+  {id:"pro7",    cat:"voucher", ico:"✨", name:"Sonata Pro · 7 days", price:2000, tier:0, desc:"Demo voucher: a week of the (imaginary) Pro plan. Shows a code to activate."},
+  {id:"sheet",   cat:"voucher", ico:"📜", name:"Printed score of your sonata", price:3500, tier:1, desc:"Demo voucher: a framed print of any song you composed, engraved as sheet music."},
+  {id:"merch",   cat:"voucher", ico:"👕", name:"15% off merch",  price:1800, tier:1, desc:"Demo voucher: 15% off the Market Sonata merch store."},
+  {id:"concert", cat:"voucher", ico:"🎟", name:"Live concert · 20% off", price:6000, tier:2, desc:"Demo voucher: 20% off a ticket to a Market Sonata live performance."},
+  {id:"commission", cat:"voucher", ico:"🎻", name:"Commission a piece", price:15000, tier:3, desc:"Demo voucher: a human composer arranges your favourite market's song for string quartet."},
+  // Musical styles for the studio: a permanent unlock, not a coupon.
+  ...Object.entries(STYLES).filter(([,s])=>!s.free).map(([id,s])=>
+    ({id:"style_"+id, style:id, cat:"style", ico:s.ico, name:`${s.name} style`, price:s.price, desc:`Studio unlock. ${s.blurb}`})),
+];
+const SHOP_BY_ID=Object.fromEntries(SHOP.map(s=>[s.id,s]));
+const DAY=864e5;
+function today(){ const d=new Date(); return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,"0")}-${String(d.getDate()).padStart(2,"0")}`; }   // local day, not UTC
+function wallet(){
+  const w=loadJSON(WALLET_KEY,null)||{};
+  return {points:0,lifetime:0,spent:0,games:0,coupons:[],ledger:[],styles:[],tutorial:false,lastDaily:"",...w};
+}
+function saveWallet(w){ saveJSON(WALLET_KEY,w); paintWallet(); }
+function tierOf(lifetime){ let t=TIERS[0]; TIERS.forEach(x=>{ if(lifetime>=x.min) t=x; }); return t; }
+function tierIdx(lifetime){ return TIERS.indexOf(tierOf(lifetime)); }
+function priceFor(item,w){ return Math.round(item.price*(1-tierOf(w.lifetime).off)); }
+function logLedger(w,delta,reason){ w.ledger.unshift({t:Date.now(),delta,reason}); w.ledger=w.ledger.slice(0,80); }
+function earn(n,reason){ if(n<=0) return; const w=wallet(); w.points+=n; w.lifetime+=n; logLedger(w,n,reason); saveWallet(w); }
+function couponCode(){ const A="ABCDEFGHJKLMNPQRSTUVWXYZ23456789"; let s="MS-"; for(let i=0;i<8;i++){ s+=A[Math.floor(Math.random()*A.length)]; if(i===3) s+="-"; } return s; }
+function couponLive(c){ return c.status==="active"&&(!c.expiresAt||c.expiresAt>Date.now()); }
+function ownedBoosts(type){ return wallet().coupons.filter(c=>c.item===type&&couponLive(c)).length; }
+function buy(id){
+  const item=SHOP_BY_ID[id], w=wallet(), cost=priceFor(item,w);
+  if(item.tier!=null&&tierIdx(w.lifetime)<item.tier){ toast(`🔒 Unlocks at ${TIERS[item.tier].name}`); return; }
+  if(item.cat==="style"&&styleUnlocked(item.style)){ toast("You already own this style"); return; }
+  if(w.points<cost){ toast(`Not enough points — you need ${(cost-w.points).toLocaleString()} more`); return; }
+  w.points-=cost; w.spent+=cost; logLedger(w,-cost,`Redeemed: ${item.name}`);
+  if(item.cat==="style"){
+    w.styles=[...new Set([...(w.styles||[]),item.style])]; saveWallet(w);
+    toast(`${item.ico} ${STYLES[item.style].name} unlocked. Pick it in Studio › Compose.`);
+    renderShop(); if(typeof renderStyleGrid==="function") renderStyleGrid();
+    return;
+  }
+  w.coupons.unshift({id:Math.random().toString(36).slice(2),item:id,code:couponCode(),status:"active",
+    issuedAt:Date.now(),expiresAt:item.cat==="voucher"?Date.now()+30*DAY:null});
+  saveWallet(w);
+  toast(`${item.ico} ${item.name} added to your wallet`);
+  renderShop();
+}
+// Consume one power-up of a type (oldest first). Returns true if one was used.
+function useBoost(type){
+  const w=wallet(); const live=w.coupons.filter(c=>c.item===type&&couponLive(c));
+  if(!live.length) return false;
+  const c=live[live.length-1]; c.status="used"; c.usedAt=Date.now(); saveWallet(w); return true;
+}
+function useVoucher(cid){
+  const w=wallet(), c=w.coupons.find(x=>x.id===cid); if(!c||!couponLive(c)) return;
+  const item=SHOP_BY_ID[c.item];
+  modal(`<div class="big-ico">${item.ico}</div><h3>${esc(item.name)}</h3>
+    <p>Use this voucher now? It can only be used once.</p>
+    <div class="modal-actions"><button class="btn-ghost" data-close>Cancel</button><button class="primary sm" id="mConfirm">Use voucher</button></div>`);
+  $("mConfirm").onclick=()=>{
+    const w2=wallet(), c2=w2.coupons.find(x=>x.id===cid); c2.status="used"; c2.usedAt=Date.now(); saveWallet(w2);
+    modal(`<div class="big-ico">✅</div><h3>Voucher used</h3><p>Show or enter this code:</p>
+      <div class="code-big">${esc(c2.code)}</div>
+      <p class="badge">Demo only. This voucher can't be exchanged for real goods or services.</p>
+      <div class="modal-actions"><button class="primary sm" data-close>Done</button></div>`);
+    renderWallet();
+  };
+}
+function toast(msg){ const t=$("toast"); t.textContent=msg; t.classList.add("on"); clearTimeout(toast._t); toast._t=setTimeout(()=>t.classList.remove("on"),2600); }
+function modal(html){
+  const m=$("modal"); $("modalCard").innerHTML=html; m.hidden=false;
+  m.querySelectorAll("[data-close]").forEach(b=>b.onclick=()=>{ m.hidden=true; });
+}
+$("modal").addEventListener("click",e=>{ if(e.target.id==="modal") $("modal").hidden=true; });
+document.addEventListener("keydown",e=>{ if(e.key==="Escape") $("modal").hidden=true; });
+function fmtDate(t){ return new Date(t).toLocaleDateString(undefined,{month:"short",day:"numeric"}); }
+
+function paintWallet(){
+  const w=wallet();
+  $("pointsTag").textContent=`🪙 ${w.points.toLocaleString()} pts`;
+  if($("gWallet")) $("gWallet").textContent=w.points.toLocaleString();
+}
+function tierHTML(w){ const t=tierOf(w.lifetime); return `${t.ico} ${t.name}${t.off?` · ${Math.round(t.off*100)}% off`:""}`; }
+function renderLobby(){
+  const w=wallet(), t=tierOf(w.lifetime), i=TIERS.indexOf(t), nx=TIERS[i+1];
+  $("lwPts").textContent=w.points.toLocaleString();
+  $("lwTier").innerHTML=tierHTML(w);
+  $("lwTierBar").style.width=nx?Math.min(100,(w.lifetime-t.min)/(nx.min-t.min)*100)+"%":"100%";
+  $("lwTierNext").textContent=nx?`${(nx.min-w.lifetime).toLocaleString()} more lifetime points to reach ${nx.ico} ${nx.name} (${Math.round(nx.off*100)}% off in the shop)`:"Top tier reached. Every reward is 15% off.";
+  const live=w.coupons.filter(couponLive).length;
+  $("lwStats").innerHTML=[["Games",w.games],["Best score",bestScore().toLocaleString()],["Coupons",live]]
+    .map(([k,v])=>`<div class="stat"><div class="k">${k}</div><div class="v">${v}</div></div>`).join("");
+  const st=(id,done,txt)=>{ $(id).textContent=txt; $(id).classList.toggle("done",done); };
+  st("psTut",w.tutorial,w.tutorial?"✓ done":"start here");
+  st("psPlay",w.games>0,w.games?`✓ ${w.games} played`:"");
+  st("psShop",w.coupons.length>0,w.coupons.length?`✓ ${w.coupons.length} redeemed`:"");
+  st("psWallet",w.coupons.some(c=>c.status==="used"),live?`${live} ready`:"");
+}
+let shopCat="all";
+document.querySelectorAll("#shopCat button").forEach(b=>b.onclick=()=>{ shopCat=b.dataset.c; document.querySelectorAll("#shopCat button").forEach(x=>x.classList.toggle("on",x===b)); renderShop(); });
+function renderShop(){
+  const w=wallet(), ti=tierIdx(w.lifetime);
+  $("shopPts").textContent=w.points.toLocaleString();
+  $("shopTier").innerHTML=tierHTML(w);
+  $("shopGrid").innerHTML=SHOP.filter(s=>shopCat==="all"||s.cat===shopCat).map(s=>{
+    const cost=priceFor(s,w), locked=s.tier!=null&&ti<s.tier, short=w.points<cost;
+    const own=w.coupons.filter(c=>c.item===s.id&&couponLive(c)).length;
+    const owned=s.cat==="style"&&styleUnlocked(s.style);
+    const kind={boost:"Power-up · no expiry",voucher:"Voucher · 30 days",style:"Studio style · yours forever"}[s.cat];
+    const btn=owned?`<a class="btn-ghost" href="#/studio/compose">✓ Owned · use it in the studio</a>`
+      :`<button class="${locked||short?"btn-ghost":"primary sm"}" data-buy="${s.id}">${locked?`Unlocks at ${TIERS[s.tier].name}`:short?`Need ${(cost-w.points).toLocaleString()} more`:"Redeem"}</button>`;
+    return `<div class="item${locked?" locked":""}">
+      <div class="ico">${s.ico}</div><h4>${esc(s.name)}</h4><p>${esc(s.desc)}</p>
+      <div class="meta"><span class="tag">${kind}</span>${locked?`<span class="tag">🔒 ${TIERS[s.tier].name}+</span>`:""}</div>
+      ${owned?"":`<div class="price"><b>${cost.toLocaleString()}</b><span class="badge">pts</span>${cost!==s.price?`<s>${s.price.toLocaleString()}</s>`:""}</div>`}
+      ${own?`<span class="own">You have ${own}</span>`:""}
+      ${btn}
+    </div>`;
+  }).join("");
+  $("shopGrid").querySelectorAll("[data-buy]").forEach(b=>b.onclick=()=>buy(b.dataset.buy));
+}
+let cpFilter="active";
+document.querySelectorAll("#cpFilter button").forEach(b=>b.onclick=()=>{ cpFilter=b.dataset.f; document.querySelectorAll("#cpFilter button").forEach(x=>x.classList.toggle("on",x===b)); renderWallet(); });
+function renderWallet(){
+  const w=wallet();
+  const list=w.coupons.filter(c=>cpFilter==="active"?couponLive(c):!couponLive(c));
+  $("couponList").innerHTML=list.length?list.map(c=>{
+    const it=SHOP_BY_ID[c.item]||{ico:"🎟",name:c.item,cat:"voucher"}, live=couponLive(c);
+    const sub=!live?(c.status==="used"?`Used ${fmtDate(c.usedAt)}`:`Expired ${fmtDate(c.expiresAt)}`)
+      :it.cat==="boost"?"Shows up as a button during a round":`Expires ${fmtDate(c.expiresAt)}`;
+    const act=!live?"":it.cat==="boost"?`<a class="btn-ghost" href="#/game/play">Use in game</a>`:`<button class="primary sm" data-use="${c.id}">Use</button>`;
+    return `<div class="coupon${live?"":" dead"}"><span class="ico">${it.ico}</span>
+      <div><b>${esc(it.name)}</b><span class="sub">${sub}</span>${it.cat==="voucher"&&c.status==="used"?`<div class="code">${esc(c.code)}</div>`:""}</div>${act}</div>`;
+  }).join(""):`<p class="empty-msg">${cpFilter==="active"?`No active coupons yet. <a class="gold" href="#/game/shop">Visit the rewards shop →</a>`:"Nothing used or expired yet."}</p>`;
+  $("couponList").querySelectorAll("[data-use]").forEach(b=>b.onclick=()=>useVoucher(b.dataset.use));
+  $("ledger").innerHTML=w.ledger.length?w.ledger.map(l=>`<div><span>${esc(l.reason)}<span class="t">${new Date(l.t).toLocaleString()}</span></span><b class="${l.delta>=0?"up":"down"}">${l.delta>=0?"+":""}${l.delta.toLocaleString()}</b></div>`).join("")
+    :`<p class="empty-msg">No points yet. Play a game to start earning.</p>`;
+}
+
+/* ---------- the tutorial: the whole game flow, one step at a time ---------- */
+const TUT=[
+  {t:"A song made from a chart",
+   p:`<p>Every song in Market Sonata is composed from a real price chart. It might be a stock, an index, a coin or a commodity, over a few months.</p><p>In game mode you hear the song <b>first</b>. Your job is to work out which chart wrote it.</p>`,
+   v:`<div class="g-demo"><div>?</div><div>?</div><div>?</div></div><p class="badge" style="text-align:center">one song · three charts · one is right</p>`},
+  {t:"Listen for the clues",
+   p:`<p>The music isn't random. Each market feature leaves a fingerprint you can hear:</p>`,
+   v:`<div class="clue"><b>Bright / dark</b><span>A rising chart sounds major or Lydian. A falling one sounds minor or Phrygian. A sideways chart sounds modal and ambiguous.</span></div>
+      <div class="clue"><b>Tempo</b><span>Calm charts sound unhurried. Jumpy charts drive faster, with busier rhythms and tenser chords.</span></div>
+      <div class="clue"><b>Loudness</b><span>Heavy trading pushes the band and drums harder.</span></div>
+      <div class="clue"><b>Chorus</b><span>The chorus is the chart's most frenzied stretch.</span></div>`},
+  {t:"Pick the chart",
+   p:`<p>Three unlabelled charts appear while the song plays. Click the one you think wrote it. You only get <b>one click per round</b>.</p><p>When you answer, all three charts are revealed: the ticker, the dates and the return.</p>`,
+   v:`<div class="g-demo"><div>A</div><div style="border-color:var(--good);color:var(--good)">B ✓</div><div>C</div></div>`},
+  {t:"How scoring works",
+   p:`<p>Answer fast and keep a streak going. A game is <b>five rounds</b>.</p>`,
+   v:`<table class="pts-table"><tr><td>Correct answer</td><td>+100</td></tr><tr><td>Speed bonus (falls to 0 over 60 s)</td><td>up to +50</td></tr><tr><td>Streak (each correct answer in a row after the first)</td><td>+20 × streak</td></tr><tr><td>Wrong answer</td><td>0, streak resets</td></tr><tr><td>First game of the day</td><td>+50 bonus</td></tr></table>`},
+  {t:"Points → rewards",
+   p:`<p>Your score goes into your <b>wallet</b> as points. Spend them in the <b>rewards shop</b>:</p><p><b>Power-ups</b> (50/50, clue card, double points, streak shield, time freeze) appear as buttons during a round. <b>Styles</b> (Lo-fi, Jazz, Electronic) unlock new sounds in the studio for good. <b>Vouchers</b> show a redeem code when you use them.</p><p>The more you earn over time, the higher your tier, and higher tiers get shop discounts and unlock more rewards.</p>`,
+   v:TIERS.map(t=>`<div class="clue"><b>${t.ico} ${t.name}</b><span>${t.min.toLocaleString()}+ lifetime pts${t.off?` · ${Math.round(t.off*100)}% off`:""}</span></div>`).join("")},
+];
+let tutStep=0;
+function renderTutorial(){
+  const s=TUT[tutStep], last=tutStep===TUT.length-1, w=wallet();
+  $("tutDots").innerHTML=TUT.map((_,i)=>`<button type="button" data-i="${i}" class="${i===tutStep?"on":i<tutStep?"seen":""}" aria-label="Step ${i+1}"></button>`).join("");
+  $("tutDots").querySelectorAll("button").forEach(b=>b.onclick=()=>{ tutStep=+b.dataset.i; renderTutorial(); });
+  $("tutBody").innerHTML=`<div><div class="eyebrow">Step ${tutStep+1}</div><h3>${s.t}</h3>${s.p}</div><div class="tut-vis">${s.v}</div>`;
+  $("tutCount").textContent=`${tutStep+1} / ${TUT.length}`;
+  $("tutPrev").disabled=tutStep===0; $("tutPrev").style.visibility=tutStep===0?"hidden":"";
+  $("tutNext").textContent=last?(w.tutorial?"▶ Start game":"▶ Claim +100 & start"):"Next →";
+}
+$("tutPrev").onclick=()=>{ if(tutStep>0){ tutStep--; renderTutorial(); } };
+$("tutNext").onclick=()=>{
+  if(tutStep<TUT.length-1){ tutStep++; renderTutorial(); return; }
+  const w=wallet();
+  if(!w.tutorial){ w.tutorial=true; saveWallet(w); earn(100,"Welcome bonus: finished the tutorial"); toast("🎉 +100 welcome points"); }
+  navTo("#/game/play");
+};
+
+function renderGamePanel(p){
+  paintWallet();
+  if(p==="lobby") renderLobby();
+  else if(p==="tutorial"){ tutStep=0; renderTutorial(); }
+  else if(p==="shop") renderShop();
+  else if(p==="wallet") renderWallet();
+  else if(p==="play"&&!game.round) gameReady();
+}
+
 function paintHud(bump){
   $("gRound").textContent=game.round?`${game.round} / ${GAME_ROUNDS}`:"–";
   $("gScore").textContent=game.score.toLocaleString();
   $("gStreak").textContent=game.streak;
   $("gBest").textContent=bestScore().toLocaleString();
-  $("pointsTag").textContent=`🎯 best ${bestScore().toLocaleString()}`;
+  paintWallet();
   if(bump) ["gScore","gStreak"].forEach(id=>{ const el=$(id); el.classList.remove("bump"); void el.offsetWidth; el.classList.add("bump"); });
 }
 function randomWindow(){
@@ -2868,24 +3646,56 @@ function chartSVG(closes,cls){
     <polygon points="0,120 ${p.join(" ")} 300,120" fill="${col}" opacity=".08"/>
     <polyline points="${p.join(" ")}" fill="none" stroke="${col}" stroke-width="2" stroke-linejoin="round" vector-effect="non-scaling-stroke"/></svg>`;
 }
-function gameIntro(){
+// The pre-game screen on #/game/play: a quick recap, plus the power-ups you'll bring.
+function gameReady(){
   game.round=0; paintHud();
+  const boosts=SHOP.filter(s=>s.cat==="boost").map(s=>({s,n:ownedBoosts(s.id)}));
+  const daily=wallet().lastDaily!==today();
   $("gBody").innerHTML=`<div class="g-intro">
     <div>
       <ol class="g-rules">
-        <li><b>Listen.</b> A mystery song plays. It was composed from one real market — a stock, index, coin or commodity — over a few months.</li>
-        <li><b>Pick the chart.</b> Three unlabelled price charts appear. Only one of them wrote the song. Click it.</li>
-        <li><b>Score.</b> Right answer = <b>100</b>, plus up to <b>+50</b> for answering fast and <b>+20</b> for every correct answer in a row. Five rounds.</li>
+        <li><b>Listen</b> to the mystery song.</li>
+        <li><b>Pick</b> the chart that wrote it. One click per round.</li>
+        <li><b>Score</b> 100 + up to 50 for speed + 20 × your streak. Five rounds. Your points go into your wallet.</li>
       </ol>
       <button class="primary" id="gStart">▶ Start game</button>
-      <p class="charthint" style="margin-top:12px">Tip: bright, major-sounding songs come from rising charts; dark ones from falling charts; fast, busy ones from jumpy charts.</p>
+      ${daily?`<p class="charthint" style="margin-top:12px;color:var(--good)">🎁 First game today earns an extra +50 points.</p>`:""}
+      <p class="charthint" style="margin-top:8px">New here? <a class="gold" href="#/game/tutorial">Read the step-by-step guide</a>.</p>
     </div>
-    <div class="g-demo" aria-hidden="true"><div>A</div><div>B</div><div>C</div></div>
+    <div>
+      <div class="eyebrow" style="margin-bottom:10px">Your power-ups</div>
+      ${boosts.map(({s,n})=>`<div class="clue"><b>${s.ico} ${esc(s.name)}</b><span>${n?`<span class="gold">× ${n}</span>`:`<a class="mist" href="#/game/shop">none · get in shop →</a>`}</span></div>`).join("")}
+    </div>
   </div>`;
   $("gStart").onclick=()=>{ game.score=0; game.streak=0; game.results=[]; game.next=null; nextRound(); };
 }
+// Power-ups bought in the shop show up here, one use of each type per round.
+function renderBoosts(){
+  const el=$("gBoosts"); if(!el) return;
+  const avail=SHOP.filter(s=>s.cat==="boost").map(s=>({s,n:ownedBoosts(s.id)})).filter(x=>x.n>0||game.used[x.s.id]);
+  if(!avail.length){ el.innerHTML=`<span class="lbl">Power-ups</span><a class="badge" href="#/game/shop">none yet · earn points and redeem them in the shop</a>`; return; }
+  el.innerHTML=`<span class="lbl">Power-ups</span>`+avail.map(({s,n})=>
+    `<button class="boost${game.used[s.id]?" active":""}" data-b="${s.id}" ${game.answered||game.used[s.id]?"disabled":""} title="${esc(s.desc)}">${s.ico} ${esc(s.name)}<span class="q">×${n}</span></button>`).join("");
+  el.querySelectorAll("[data-b]").forEach(b=>b.onclick=()=>activateBoost(b.dataset.b));
+}
+function activateBoost(id){
+  if(game.answered||game.used[id]||!useBoost(id)) return;
+  game.used[id]=true;
+  const r=game.cur;
+  if(id==="fifty"){
+    const wrong=[0,1,2].filter(i=>i!==r.answer), kill=rnd(wrong);
+    $("gBody").querySelector(`.g-card[data-i="${kill}"]`).classList.add("eliminated");
+  }else if(id==="clue"){
+    const t=r.opts[r.answer];
+    $("gClue").innerHTML=`<div class="clue-box">🔎 <b>Clue:</b> ${explain(r.score,t.feat)} The winning chart ${t.feat.totalReturn>=0?"ends <b>higher</b> than it starts":"ends <b>lower</b> than it starts"}.</div>`;
+  }else if(id==="replay"){
+    game.frozen=true; game.t0=performance.now();
+  }
+  toast(`${SHOP_BY_ID[id].ico} ${SHOP_BY_ID[id].name} activated`);
+  renderBoosts();
+}
 async function nextRound(){
-  game.round++; paintHud(); game.answered=false;
+  game.round++; paintHud(); game.answered=false; game.used={}; game.frozen=false;
   $("gBody").innerHTML=`<div class="ai-status" style="padding:30px 0"><span class="spin"></span> Picking three real markets and composing the mystery song…</div>`;
   let r=game.next; game.next=null;
   try{ r=r?await r:await buildRound(); }catch(e){ $("gBody").innerHTML=`<p class="badge">Couldn't build a round (${esc(e.message)}). <button class="btn-ghost" id="gRetry">Try again</button></p>`; $("gRetry").onclick=()=>{ game.round--; nextRound(); }; return; }
@@ -2899,14 +3709,17 @@ async function nextRound(){
     </div>
     <p class="g-ask">Which chart wrote this song? <b>Click it.</b></p>
     <div class="g-cards">${r.opts.map((o,i)=>`<button class="g-card" data-i="${i}"><span class="lt">${"ABC"[i]}</span>${chartSVG(o.series.close)}<div class="who">${o.series.close.length} trading days</div></button>`).join("")}</div>
+    <div class="boosts" id="gBoosts"></div>
+    <div id="gClue"></div>
     <div id="gAfter"></div>`;
+  renderBoosts();
   $("gPlay").onclick=()=>game.playing?gameStopAudio():gamePlay(r.score);
   $("gBody").querySelectorAll(".g-card").forEach(b=>b.onclick=()=>answer(+b.dataset.i));
   game.t0=performance.now();
   gamePlay(r.score);
   tickBonus();
 }
-function speedBonus(){ return Math.max(0,Math.round(50*(1-(performance.now()-game.t0)/60000))); }
+function speedBonus(){ return game.frozen?50:Math.max(0,Math.round(50*(1-(performance.now()-game.t0)/60000))); }
 function tickBonus(){
   if(game.answered||!$("gBonus")) return;
   $("gBonus").textContent=`speed bonus +${speedBonus()}`;
@@ -2922,10 +3735,12 @@ function answer(i){
   if(game.answered) return;
   game.answered=true;
   const r=game.cur, ok=i===r.answer, bonus=ok?speedBonus():0, streakBonus=ok&&game.streak>=1?20*game.streak:0;
-  const pts=ok?100+bonus+streakBonus:0;
-  game.streak=ok?game.streak+1:0; game.score+=pts; game.results.push(ok);
+  const base=ok?100+bonus+streakBonus:0, doubled=ok&&game.used.double, pts=doubled?base*2:base;
+  const shielded=!ok&&game.used.shield;
+  game.streak=ok?game.streak+1:(shielded?game.streak:0); game.score+=pts; game.results.push(ok);
   if(game.score>bestScore()) saveJSON(BEST_KEY,game.score);
   paintHud(true);
+  renderBoosts();
   $("gBonus").textContent=ok?`+${pts}`:"+0";
   $("gBody").querySelectorAll(".g-card").forEach((b,j)=>{
     const o=r.opts[j], ret=o.feat.totalReturn*100, cls=ret>=0?"up":"down";
@@ -2938,7 +3753,7 @@ function answer(i){
   const t=r.opts[r.answer], last=game.round>=GAME_ROUNDS;
   $("gAfter").innerHTML=`<div class="g-result">
     <div class="big ${ok?"up":"down"}">${ok?"✓ +"+pts:"✗ 0"}</div>
-    <p>${ok?`Right! 100 + ${bonus} speed${streakBonus?` + ${streakBonus} streak`:""}. `:`Not this time — it was chart <b>${"ABC"[r.answer]}</b>. `}${explain(r.score,t.feat)}</p>
+    <p>${ok?`Right! 100 + ${bonus} speed${streakBonus?` + ${streakBonus} streak`:""}${doubled?`, doubled ⚡`:""}. `:`Not this time. It was chart <b>${"ABC"[r.answer]}</b>.${shielded?" 🛡 Your streak is safe.":""} `}${explain(r.score,t.feat)}</p>
     <div style="display:flex;gap:8px;flex-wrap:wrap">
       <button class="btn-ghost" id="gOpen">Open ${esc(t.series.symbol)} in the player</button>
       <button class="primary" id="gNext">${last?"See results":"Next round →"}</button>
@@ -2948,18 +3763,38 @@ function answer(i){
     gameStopAudio();
     $("symbol").value=t.series.symbol; $("start").value=t.series.dates[0]; $("end").value=t.series.dates[t.series.dates.length-1];
     rangeKey="custom"; intervalKey="1d"; paintRangeSeg(); paintIntervalSeg();
-    $("listen").scrollIntoView({behavior:"smooth"}); doCompose();
+    navTo("#/studio/listen"); doCompose();
   };
 }
 function gameOver(){
   game.round=GAME_ROUNDS; paintHud();
   const right=game.results.filter(Boolean).length, best=bestScore();
+  // Pay the score into the wallet, plus the once-a-day bonus.
+  const before=wallet(), tierBefore=tierOf(before.lifetime);
+  const daily=before.lastDaily!==today()?50:0;
+  const w=wallet(); w.games++; if(daily) w.lastDaily=today(); saveWallet(w);
+  earn(game.score,`Game: ${right}/${GAME_ROUNDS} right`);
+  if(daily) earn(daily,"Daily bonus: first game today");
+  const after=wallet(), tierAfter=tierOf(after.lifetime);
+  if(tierAfter!==tierBefore) setTimeout(()=>modal(`<div class="big-ico">${tierAfter.ico}</div><h3>You're now a ${tierAfter.name}</h3>
+    <p>Everything in the rewards shop is now ${Math.round(tierAfter.off*100)}% off, and new vouchers are unlocked.</p>
+    <div class="modal-actions"><button class="btn-ghost" data-close>Later</button><a class="primary sm" href="#/game/shop" onclick="document.getElementById('modal').hidden=true">Open the shop</a></div>`),600);
+  const cheapest=SHOP.filter(s=>s.cat==="boost").map(s=>priceFor(s,after)).sort((a,b)=>a-b)[0];
   $("gBody").innerHTML=`<div class="g-final">
     <div class="eyebrow">Final score</div>
     <div class="big gold">${game.score.toLocaleString()}</div>
     <div class="g-dots">${game.results.map(ok=>`<i class="${ok?"ok":"no"}"></i>`).join("")}</div>
     <p class="mist">${right} of ${GAME_ROUNDS} right${game.score>=best&&game.score>0?" · new personal best!":` · best ${best.toLocaleString()}`}</p>
-    <button class="primary" id="gAgain">▶ Play again</button></div>`;
+    <div class="earned">
+      <div><span>Game score</span><b>+${game.score.toLocaleString()}</b></div>
+      ${daily?`<div><span>🎁 Daily bonus</span><b>+${daily}</b></div>`:""}
+      <div class="tot"><span>Wallet balance</span><b>${after.points.toLocaleString()} pts</b></div>
+    </div>
+    <div class="modal-actions">
+      <button class="primary" id="gAgain">▶ Play again</button>
+      <a class="btn-ghost lg" href="#/game/shop">🛍 ${after.points>=cheapest?"Redeem rewards":"Browse rewards"}</a>
+      <a class="btn-ghost lg" href="#/game/lobby">🏠 Lobby</a>
+    </div></div>`;
   $("gAgain").onclick=()=>{ game.score=0; game.streak=0; game.results=[]; game.round=0; nextRound(); };
 }
 // The game has its own transport run (the main player is stopped first).
@@ -2996,8 +3831,244 @@ function gameStopAudio(){
   gameAudioEnded();
   try{ Tone.Transport.stop(); Tone.Transport.cancel(); releaseAll(); }catch(e){}
 }
-gameIntro();
+/* ===================== the studio as a path ===================== */
+// Six steps in three phases. Each step knows its own state (what you chose,
+// how much you've heard, whether the AI note is written, whether it's saved),
+// the stepper shows it, and every panel ends with a "what's next" suggestion.
+const LIB_KEY="ms-library";
+const studio={key:"",listened:0,scoreSeen:false,dirty:false};
+const libSel=new Set();
+function compKey(){
+  if(!current) return "";
+  const s=current.series;
+  return [s.symbol,s.dates[0],s.dates[s.dates.length-1],s.interval||"1d",current.score.style||"pop"].join("|");
+}
+function syncStudioKey(){ const k=compKey(); if(k!==studio.key){ studio.key=k; studio.listened=0; studio.scoreSeen=false; } }
+function library(){ return loadJSON(LIB_KEY,[]); }
+function isSaved(){ return !!current&&library().some(x=>x.id===studio.key); }
+function styleUnlocked(id){ const s=STYLES[id]; if(!s) return false; if(s.free) return true; return (wallet().styles||[]).includes(id); }
+function styleOf(id){ return STYLES[id]||STYLES.pop; }
+if(!styleUnlocked(studioStyle)) studioStyle="pop";
+
+const STUDIO_STEPS=[
+  {phase:"Set up",id:"explore",label:"Choose",st:()=>current?{done:true,t:`${current.series.symbol}${nameCache[current.series.symbol]?" · "+nameCache[current.series.symbol]:""}`}:{t:"pick a market"}},
+  {id:"compose",label:"Compose",st:()=>current?{done:true,t:`${styleOf(current.score.style).ico} ${styleOf(current.score.style).name} · ${Math.round(current.score.tempo)} BPM`}:{t:"window & style"}},
+  {phase:"Experience",id:"listen",label:"Listen",st:()=>studio.listened>=0.9?{done:true,t:"heard it all"}:studio.listened>0.02?{t:`heard ${Math.round(studio.listened*100)}%`}:{t:"not played yet"}},
+  {id:"score",label:"Score",st:()=>studio.scoreSeen?{done:true,t:"explored"}:{t:"piano roll & charts"}},
+  {phase:"Go further",id:"story",label:"Story",st:()=>(noteIsAi&&noteFor===noteKey())?{done:true,t:"AI note written"}:{t:"draft note"}},
+  {id:"collection",label:"Collection",st:()=>{ const n=library().length; return isSaved()?{done:true,t:`saved · ${n} in library`}:{t:n?`${n} saved`:"nothing saved yet"}; }},
+];
+function paintStepper(){
+  const el=$("studioTabs"); if(!el) return;
+  const phases=[]; STUDIO_STEPS.forEach((s,i)=>{ if(s.phase) phases.push({name:s.phase,steps:[]}); phases[phases.length-1].steps.push({...s,n:i+1}); });
+  el.innerHTML=phases.map(ph=>`<div class="phase"><span class="phase-l">${ph.name}</span><div class="phase-steps">${ph.steps.map(s=>{
+      const st=s.st(), on=route.screen==="studio"&&route.panel===s.id;
+      return `<a class="stp${on?" on":""}${st.done?" done":""}" href="#/studio/${s.id}"${on?' aria-current="step"':""}><span class="dot">${st.done?"✓":s.n}</span><span class="tx"><b>${s.label}</b><small>${esc(st.t)}</small></span></a>`;
+    }).join("")}</div></div>`).join("")+`<a class="stp-cta" href="#/game">🎮 Game mode</a>`;
+}
+// What to do next, written for the state you're actually in.
+function renderNextHint(p){
+  const el=$("nh-"+p); if(!el) return;
+  const sym=current?current.series.symbol:"this market";
+  const H={
+    explore:()=>`<p>Selected <b>${esc($("symbol").value||sym)}</b>. Next, choose the time window and a musical style, and see how the data becomes music.</p><a class="primary sm" href="#/studio/compose">Set up the piece →</a>`,
+    compose:()=>`<p>Want a different market? Go back a step. Each style has its own form, groove and instruments, so try a few.</p><a class="btn-ghost" href="#/studio/explore">← Choose</a>`,
+    listen:()=>studio.listened<0.3
+      ?`<p>Press <b>▶</b> to hear it. Click the price line on the stage to jump to any moment in the song.</p><a class="btn-ghost" href="#/studio/score">Skip to the score →</a>`
+      :`<p>See why it sounds like that: the piano roll lines up every section with the stretch of the chart it came from.</p><a class="primary sm" href="#/studio/score">Read the score →</a>`,
+    score:()=>`<p>Ready to read the story in words? Claude can write a programme note from this exact price history and score.</p><a class="primary sm" href="#/studio/story">The story →</a>`,
+    story:()=>isSaved()
+      ?`<p><b>${esc(sym)}</b> is in your collection. Compare it with another song, or test your ear in game mode.</p><a class="primary sm" href="#/studio/collection">Open collection →</a><a class="btn-ghost" href="#/game">🎮 Game mode</a>`
+      :`<p>Like this one? Save it to come back to it or compare it with others.</p><button class="primary sm" data-save>☆ Save to collection</button><a class="btn-ghost" href="#/studio/collection">Collection →</a>`,
+    collection:()=>`<p>Try the same market in another style, or start with a new market.</p><a class="btn-ghost" href="#/studio/compose">⚙ Change style</a><a class="btn-ghost" href="#/studio/explore">New market</a><a class="btn-ghost" href="#/game">🎮 Game mode</a>`,
+  };
+  el.innerHTML=(H[p]||(()=>""))();
+  el.querySelectorAll("[data-save]").forEach(b=>b.onclick=()=>{ toggleSave(); renderNextHint(p); });
+}
+function renderStudioPanel(p){
+  syncStudioKey();
+  if(p==="score"&&current) studio.scoreSeen=true;
+  if(p==="compose") renderCompose();
+  if(p==="collection") renderLibrary();
+  paintSaveBtn(); paintStepper(); renderNextHint(p);
+}
+function paintStudio(){ if(route.screen==="studio") renderStudioPanel(route.panel); else { syncStudioKey(); paintSaveBtn(); } }
+
+/* ---------- compose step: market, window, style, blueprint ---------- */
+function applyStyleInstruments(id){
+  const inst=styleOf(id).inst;
+  Object.entries(inst).forEach(([g,v])=>{
+    setInstrument(g,v);
+    const sel=document.querySelector(`#instGrid select[aria-label="${INST_ROW_LABEL[g]} instrument"]`); if(sel) sel.value=v;
+  });
+}
+function renderStyleGrid(){
+  const el=$("styleGrid"); if(!el) return;
+  const w=wallet();
+  el.innerHTML=Object.entries(STYLES).map(([id,s])=>{
+    const ok=styleUnlocked(id), item=SHOP.find(x=>x.style===id);
+    return `<button type="button" class="sty${id===studioStyle?" on":""}${ok?"":" locked"}" data-s="${id}">
+      ${ok?"":`<span class="lk">🔒 ${priceFor(item,w).toLocaleString()} pts</span>`}
+      <span class="ico">${s.ico}</span><b>${s.name}</b><span class="d">${esc(s.blurb)}</span></button>`;
+  }).join("");
+  el.querySelectorAll("[data-s]").forEach(b=>b.onclick=()=>pickStyle(b.dataset.s));
+}
+function pickStyle(id){
+  if(!styleUnlocked(id)){
+    const s=STYLES[id], item=SHOP.find(x=>x.style===id), w=wallet(), cost=priceFor(item,w);
+    modal(`<div class="big-ico">${s.ico}</div><h3>Unlock ${s.name}</h3><p>${esc(s.blurb)}</p>
+      <p>Costs <b class="gold">${cost.toLocaleString()} pts</b>. You have <b>${w.points.toLocaleString()}</b>.</p>
+      <div class="modal-actions">${w.points>=cost
+        ?`<button class="btn-ghost" data-close>Not now</button><button class="primary sm" id="mUnlock">Unlock for ${cost.toLocaleString()} pts</button>`
+        :`<button class="btn-ghost" data-close>Not now</button><a class="primary sm" href="#/game" onclick="document.getElementById('modal').hidden=true">🎮 Earn points in game mode</a>`}</div>`);
+    const u=$("mUnlock"); if(u) u.onclick=()=>{ $("modal").hidden=true; buy(item.id); if(styleUnlocked(id)) pickStyle(id); };
+    return;
+  }
+  studioStyle=id; saveJSON(STYLE_KEY,id);
+  applyStyleInstruments(id);
+  renderStyleGrid();
+  doCompose().then(()=>{ if(route.panel==="compose") renderCompose(); });   // the blueprint updates live
+}
+function bpBar(v,sym){
+  if(sym){ const w=Math.abs(v)*50; return `<div class="bp-bar sym"><i class="${v<0?"neg":""}" style="${v<0?`right:50%`:`left:50%`};width:${w}%"></i></div>`; }
+  return `<div class="bp-bar"><i style="left:0;width:${Math.max(2,v*100)}%"></i></div>`;
+}
+const BASS_LABEL={walk4:"walking", alberti:"Alberti", lofi:"laid-back"};
+const DRUM_LABEL={none:"no drums", swing:"ride-cymbal swing", lofi:"boom-bap drums"};
+function renderBlueprint(){
+  const el=$("blueprint"); if(!el) return;
+  if(!current){ el.innerHTML=`<p class="empty-msg">Compose a song to see its blueprint.</p>`; return; }
+  const {feat:f,score:s,series}=current, sig=s.signature||{}, S=styleOf(s.style);
+  const fam={bright:"bright family: rising market",dark:"dark family: falling market",modal:"modal family: no clear direction"}[sig.family]||"";
+  const loud=f.avgVolume>0.6?"loud":f.avgVolume>0.35?"moderate":"soft";
+  // the most energetic phrase becomes the hook: show which dates it covers
+  const ph=f.phrases, e=p=>0.5*p.volatility+0.5*p.volume;
+  const hi=ph.reduce((a,b)=>e(b)>=e(a)?b:a,ph[0]); const n=series.dates.length, k=ph.length;
+  const d0=series.dates[Math.floor(hi.index*n/k)], d1=series.dates[Math.min(n-1,Math.floor((hi.index+1)*n/k)-1)];
+  const rows=[
+    ["Trend",`${f.trend>=0?"+":""}${f.trend.toFixed(2)} · return ${(f.totalReturn*100).toFixed(1)}%`,bpBar(f.trend,true),`${s.keyName} ${s.mode}`,fam],
+    ["Volatility",`${Math.round(f.avgVol*100)}%`,bpBar(f.avgVol),`${Math.round(s.tempo)} BPM`,f.avgVol>0.45?"fast, busy rhythms and 7th chords":"unhurried, open rhythms"],
+    ["Volume",`${Math.round(f.avgVolume*100)}% of peak`,bpBar(f.avgVolume),`${loud} dynamics`,"heavier trading → harder playing"],
+    ["Most energetic stretch",`${esc(d0)} → ${esc(d1)}`,bpBar(e(hi)),`the ${S.form?S.form[2].name.toLowerCase():"chorus"} hook`,`${sig.hook||""} rhythm`],
+    ["Max drawdown",`−${(f.maxDrawdown*100).toFixed(1)}%`,bpBar(f.maxDrawdown),"the story's low point","used in the programme note"],
+    ["Ticker",esc(series.symbol),bpBar(1),"its signature",`key of ${sig.key} · ${BASS_LABEL[sig.bass]||sig.bass} bass · ${DRUM_LABEL[sig.drums]||sig.drums+" drums"}${sig.swing?` · ${Math.round(sig.swing*100)}% swing`:""}`],
+    ["Style",`${S.ico} ${S.name}`,bpBar(1),"the form",(S.form||FORM).map(x=>x.name).join(" · ")],
+  ];
+  el.innerHTML=rows.map(([k,v,bar,m,ms])=>`<div class="bp-row"><div class="bp-k"><b>${k}</b>${v}</div>${bar}<div class="bp-arrow">→</div><div class="bp-m"><b>${m}</b><span>${esc(ms)}</span></div></div>`).join("");
+  $("bpTitle").textContent=`${series.symbol}: from data to music`;
+}
+function renderCompose(){
+  const sym=$("symbol").value.trim().toUpperCase()||"AAPL";
+  $("cpSym").textContent=sym; $("cpName").textContent=nameCache[sym]||"";
+  renderStyleGrid(); renderBlueprint();
+  $("bpStale").hidden=!(studio.dirty||(current&&(current.score.style!==studioStyle||current.series.symbol!==sym)));
+}
+["start","end"].forEach(id=>$(id).addEventListener("change",()=>{ studio.dirty=true; if(route.panel==="compose") renderCompose(); }));
+$("cpCompose").onclick=async()=>{
+  const sym=$("symbol").value.trim().toUpperCase();
+  if(!current||studio.dirty||current.score.style!==studioStyle||current.series.symbol!==sym) await doCompose();
+  navTo("#/studio/listen");
+  if(current&&!playing) playScore();
+};
+
+/* ---------- collection: save, reopen, compare ---------- */
+function toggleSave(){
+  if(!current) return;
+  let lib=library();
+  if(lib.some(x=>x.id===studio.key)){ lib=lib.filter(x=>x.id!==studio.key); toast("Removed from your collection"); }
+  else{
+    const {series:s,feat:f,score:sc}=current, c=s.close, step=Math.max(1,Math.floor(c.length/48));
+    lib.unshift({id:studio.key,symbol:s.symbol,name:nameCache[s.symbol]||"",start:s.dates[0],end:s.dates[s.dates.length-1],
+      range:rangeKey,interval:intervalKey,style:sc.style||"pop",key:`${sc.keyName} ${sc.mode}`,tempo:Math.round(sc.tempo),
+      family:(sc.signature||{}).family,ret:f.totalReturn,vol:f.avgVol,volume:f.avgVolume,mdd:f.maxDrawdown,trend:f.trend,
+      bars:c.length,spark:c.filter((_,i)=>i%step===0).concat([c[c.length-1]]),savedAt:Date.now()});
+    lib=lib.slice(0,60); toast(`★ ${s.symbol} saved to your collection`);
+  }
+  saveJSON(LIB_KEY,lib); paintStudio();
+}
+function paintSaveBtn(){ const b=$("saveBtn"); if(!b) return; const on=isSaved(); b.textContent=on?"★ Saved":"☆ Save"; b.style.color=on?"var(--gold-ink)":""; }
+$("saveBtn").onclick=toggleSave;
+function openSaved(it){
+  $("symbol").value=it.symbol; $("start").value=it.start; $("end").value=it.end;
+  rangeKey="custom"; intervalKey=INTERVAL_OPTS.some(o=>o[0]===it.interval)?it.interval:"auto";
+  if(styleUnlocked(it.style)&&it.style!==studioStyle){ studioStyle=it.style; saveJSON(STYLE_KEY,it.style); applyStyleInstruments(it.style); }
+  paintRangeSeg(); paintIntervalSeg(); syncChips();
+  navTo("#/studio/listen"); doCompose();
+}
+function renderLibrary(){
+  const lib=library(); [...libSel].forEach(id=>{ if(!lib.some(x=>x.id===id)) libSel.delete(id); });
+  $("libGrid").innerHTML=lib.length?lib.map(it=>{
+    const S=styleOf(it.style), up=it.ret>=0;
+    return `<div class="lib-item${libSel.has(it.id)?" sel":""}">
+      <div class="top"><span class="sym">${esc(it.symbol)}</span><span class="mono ${up?"up":"down"}">${up?"+":""}${(it.ret*100).toFixed(1)}%</span></div>
+      <div class="meta">${esc(it.name)}${it.name?" · ":""}${esc(it.start)} → ${esc(it.end)}</div>
+      ${chartSVG(it.spark,up?"up":"down")}
+      <div class="meta">${S.ico} ${S.name} · ${esc(it.key)} · ${it.tempo} BPM</div>
+      <div class="acts">
+        <button class="primary sm" data-open="${esc(it.id)}">▶ Open</button>
+        <button class="btn-ghost" data-del="${esc(it.id)}" title="Remove">✕</button>
+        <label><input type="checkbox" data-cmp="${esc(it.id)}" ${libSel.has(it.id)?"checked":""}/> Compare</label>
+      </div></div>`;
+  }).join(""):`<div class="card empty full" style="grid-column:1/-1"><div><div class="display mist" style="font-size:28px">No saved songs yet</div>
+      <p class="mist" style="font-size:14px">Press <b>☆ Save</b> in the player to keep a song here.</p><a class="btn-ghost" href="#/studio/listen">Go to the player →</a></div></div>`;
+  const find=id=>lib.find(x=>x.id===id);
+  $("libGrid").querySelectorAll("[data-open]").forEach(b=>b.onclick=()=>openSaved(find(b.dataset.open)));
+  $("libGrid").querySelectorAll("[data-del]").forEach(b=>b.onclick=()=>{ saveJSON(LIB_KEY,library().filter(x=>x.id!==b.dataset.del)); libSel.delete(b.dataset.del); renderStudioPanel("collection"); });
+  $("libGrid").querySelectorAll("[data-cmp]").forEach(c=>c.onchange=()=>{
+    const id=c.dataset.cmp;
+    if(c.checked){ if(libSel.size>=2){ const first=[...libSel][0]; libSel.delete(first); } libSel.add(id); } else libSel.delete(id);
+    renderLibrary();
+  });
+  renderCompare(lib);
+}
+function renderCompare(lib){
+  const items=[...libSel].map(id=>lib.find(x=>x.id===id)).filter(Boolean);
+  $("cmpCard").hidden=items.length<1;
+  if(!items.length) return;
+  if(items.length<2){ $("cmpBody").innerHTML=`<p class="empty-msg">Tick one more song to compare.</p>`; return; }
+  const [a,b]=items, pct=v=>`${(v*100).toFixed(1)}%`;
+  const rows=[
+    ["Market",x=>`${esc(x.symbol)}`,null],["Window",x=>`${esc(x.start)} → ${esc(x.end)}`,null],
+    ["Style",x=>`${styleOf(x.style).ico} ${styleOf(x.style).name}`,null],["Key",x=>esc(x.key),null],
+    ["Return",x=>`${x.ret>=0?"+":""}${pct(x.ret)}`,"ret"],["Tempo",x=>`${x.tempo} BPM`,"tempo"],
+    ["Volatility",x=>pct(x.vol),"vol"],["Volume",x=>pct(x.volume),"volume"],["Max drawdown",x=>`−${pct(x.mdd)}`,"mddLow"],
+  ];
+  const win=(k,x,y)=>k==="mddLow"?x.mdd<y.mdd:k?x[k]>y[k]:false;
+  const hd=x=>`${esc(x.symbol)} · ${styleOf(x.style).name}`;
+  $("cmpBody").innerHTML=`<table class="cmp"><thead><tr><th></th><th>${hd(a)}</th><th>${hd(b)}</th></tr></thead><tbody>${
+    rows.map(([l,f,k])=>`<tr><td>${l}</td><td class="${win(k,a,b)?"win":""}">${f(a)}</td><td class="${win(k,b,a)?"win":""}">${f(b)}</td></tr>`).join("")}</tbody></table>`
+    +`<p class="cmp-note">${compareSentence(a,b)}</p>`;
+}
+$("cmpClear").onclick=()=>{ libSel.clear(); renderLibrary(); };
+// Explain the musical difference in terms of the data difference.
+function compareSentence(a,b){
+  const out=[];
+  if(a.symbol===b.symbol&&a.start===b.start&&a.end===b.end){
+    const fa=(styleOf(a.style).form||FORM).map(x=>x.name), fb=(styleOf(b.style).form||FORM).map(x=>x.name);
+    return `Same market, same window: the data and the mapping are identical, so both are in <b>${esc(a.key)}</b> and share the same hook. `
+      +`Only the style differs. <b>${styleOf(a.style).name}</b> plays it at ${a.tempo} BPM as ${fa[1]} → ${fa[2]}, and <b>${styleOf(b.style).name}</b> at ${b.tempo} BPM as ${fb[1]} → ${fb[2]}.`;
+  }
+  const moodW=x=>x.family==="bright"?"a bright mode":x.family==="dark"?"a dark mode":"an ambiguous mode";
+  out.push(`<b>${esc(a.symbol)}</b> ${a.ret>=0?"rose":"fell"} ${Math.abs(a.ret*100).toFixed(1)}% and <b>${esc(b.symbol)}</b> ${b.ret>=0?"rose":"fell"} ${Math.abs(b.ret*100).toFixed(1)}%, so `
+    +(a.family===b.family?`both songs are in ${moodW(a)} (${esc(a.key)} and ${esc(b.key)}).`:`${esc(a.symbol)} is in ${moodW(a)} (${esc(a.key)}) and ${esc(b.symbol)} in ${moodW(b)} (${esc(b.key)}).`));
+  const jumpy=a.vol>b.vol?a:b, calm=jumpy===a?b:a, dt=Math.abs(a.tempo-b.tempo);
+  if(a.style===b.style) out.push(`${esc(jumpy.symbol)} was the jumpier market, so its song runs ${dt} BPM faster and busier.`);
+  else out.push(`${esc(jumpy.symbol)} was jumpier, but the two are in different styles (${styleOf(a.style).name} vs ${styleOf(b.style).name}), which also change the tempo range. Save both in the same style to compare like with like.`);
+  if(Math.abs(a.mdd-b.mdd)>0.05){ const deep=a.mdd>b.mdd?a:b; out.push(`${esc(deep.symbol)} had the deeper fall (−${(deep.mdd*100).toFixed(1)}%).`); }
+  return out.join(" ");
+}
+
+// Wire the studio into composing and playback.
+const _renderView=render;
+render=function(){ _renderView(); studio.dirty=false; paintStudio(); };
+setInterval(()=>{
+  if(playing&&current){ studio.listened=Math.max(studio.listened,rollProgress); if(route.screen==="studio"){ paintStepper(); if(route.panel==="listen") renderNextHint("listen"); } }
+},1000);
+applyStyleInstruments(studioStyle);
+
+gameReady();
 paintHud();
+applyRoute();
 
 // Seed the form from the share link if there is one, otherwise default to the
 // last ~6 months so live refresh has a moving edge.
